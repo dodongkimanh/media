@@ -1,13 +1,5 @@
 import { createClient } from '@/lib/supabase/client'
 
-function datePath() {
-  const now = new Date()
-  const y = now.getFullYear()
-  const m = String(now.getMonth() + 1).padStart(2, '0')
-  const d = String(now.getDate()).padStart(2, '0')
-  return `${y}/${m}/${d}`
-}
-
 export async function uploadFile(
   file: File,
   bucket: 'products' | 'media' | 'articles',
@@ -15,8 +7,8 @@ export async function uploadFile(
 ): Promise<string> {
   const supabase = createClient()
   const ext = file.name.split('.').pop()
-  const prefix = folder ? `${folder}/${datePath()}` : datePath()
-  const name = `${prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const uid = Math.floor(Math.random() * 1_000_000_000).toString().padStart(9, '0')
+  const name = folder ? `${folder}/xuongkimanh-${uid}.${ext}` : `xuongkimanh-${uid}.${ext}`
   const { error } = await supabase.storage.from(bucket).upload(name, file, { upsert: false })
   if (error) throw error
   const { data } = supabase.storage.from(bucket).getPublicUrl(name)
