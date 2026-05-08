@@ -28,18 +28,21 @@ export default function ChatPage() {
     const supabase = createClient()
 
     async function loadMessages() {
-      const { data } = await supabase
-        .from('messages')
-        .select('*, profiles(*)')
-        .order('created_at', { ascending: true })
-        .limit(200)
-      setMessages(data ?? [])
-      setTimeout(() => scrollToBottom(), 50)
+      try {
+        const { data } = await supabase
+          .from('messages')
+          .select('*, profiles(*)')
+          .order('created_at', { ascending: true })
+          .limit(200)
+        if (data && data.length > 0) { setMessages(data); setTimeout(() => scrollToBottom(), 50) }
+      } catch { /* preview mode: keep mock data */ }
     }
 
     async function loadMembers() {
-      const { data } = await supabase.from('profiles').select('*').order('full_name')
-      setMembers(data ?? [])
+      try {
+        const { data } = await supabase.from('profiles').select('*').order('full_name')
+        if (data && data.length > 0) setMembers(data)
+      } catch { /* preview mode: keep mock data */ }
     }
 
     loadMessages()

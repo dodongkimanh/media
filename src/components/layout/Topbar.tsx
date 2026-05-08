@@ -15,9 +15,11 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
 
   async function handleLogout() {
     const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-    router.refresh()
+    await Promise.race([
+      supabase.auth.signOut(),
+      new Promise(r => setTimeout(r, 1500))
+    ]).catch(() => {})
+    window.location.href = '/login?logout=1'
   }
 
   return (
@@ -37,7 +39,7 @@ export function Topbar({ onMenuToggle }: TopbarProps) {
             <path d="M3 5h14M3 10h14M3 15h14"/>
           </svg>
         </button>
-        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 19, color: 'var(--gd)' }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, color: 'var(--gd)' }}>
           KIMANH
         </div>
       </div>

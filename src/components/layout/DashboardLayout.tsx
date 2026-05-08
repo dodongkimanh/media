@@ -17,7 +17,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div style={{ display: 'flex', height: '100vh', flexDirection: 'column', overflow: 'hidden' }}>
       <Topbar onMenuToggle={() => setSidebarOpen(v => !v)} />
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <main style={{ flex: 1, overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
           {children}

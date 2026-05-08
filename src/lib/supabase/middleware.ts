@@ -21,7 +21,17 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  let user = null
+  try {
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('timeout')), 2000)
+    )
+    const { data } = await Promise.race([supabase.auth.getUser(), timeout])
+    user = data.user
+  } catch {
+    // Supabase unreachable — allow request through without session refresh
+    return supabaseResponse
+  }
 
   const isLoginPage = request.nextUrl.pathname === '/login'
   const isAuthCallback = request.nextUrl.pathname.startsWith('/auth/')
@@ -32,7 +42,8 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  if (user && isLoginPage) {
+  const isLoggingOut = request.nextUrl.searchParams.get('logout') === '1'
+  if (user && isLoginPage && !isLoggingOut) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

@@ -10,9 +10,10 @@ interface ModalProps {
   footer?: React.ReactNode
   maxWidth?: number
   scrollable?: boolean
+  confirmClose?: boolean
 }
 
-export function Modal({ open, onClose, title, children, footer, maxWidth = 560, scrollable = true }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, maxWidth = 560, scrollable = true, confirmClose = false }: ModalProps) {
   const overlayRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -22,18 +23,35 @@ export function Modal({ open, onClose, title, children, footer, maxWidth = 560, 
   }, [open])
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (confirmClose) {
+          if (window.confirm('Bạn chưa lưu thay đổi. Bạn có muốn thoát không?')) onClose()
+        } else {
+          onClose()
+        }
+      }
+    }
     if (open) window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
+  }, [open, onClose, confirmClose])
 
   if (!open) return null
+
+  function handleOverlayClick(e: React.MouseEvent<HTMLDivElement>) {
+    if (e.target !== overlayRef.current) return
+    if (confirmClose) {
+      if (window.confirm('Bạn chưa lưu thay đổi. Bạn có muốn thoát không?')) onClose()
+    } else {
+      onClose()
+    }
+  }
 
   return (
     <div
       ref={overlayRef}
       className="modal-overlay"
-      onClick={e => { if (e.target === overlayRef.current) onClose() }}
+      onClick={handleOverlayClick}
     >
       <div className="modal" style={{ maxWidth }}>
         <div className="modal-hdr">

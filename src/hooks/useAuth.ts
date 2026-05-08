@@ -12,8 +12,12 @@ export function useAuth() {
     const supabase = createClient()
 
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { setLoading(false); return }
+      const { data: { user }, error } = await supabase.auth.getUser()
+      if (error || !user) {
+        setProfile(null)
+        setLoading(false)
+        return
+      }
       const { data } = await supabase
         .from('profiles')
         .select('*')
@@ -25,11 +29,17 @@ export function useAuth() {
 
     load()
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => load())
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) { setProfile(null); setLoading(false); return }
+      load()
+    })
     return () => subscription.unsubscribe()
   }, [])
 
   const isAdmin = profile?.role === 'admin'
+  const isLead = profile?.role === 'lead'
+  // admin và lead đều có quyền quản lý
+  const canManage = isAdmin || isLead
 
-  return { profile, isAdmin, loading }
+  return { profile, isAdmin, isLead, canManage, loading }
 }

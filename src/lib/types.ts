@@ -1,4 +1,4 @@
-export type Role = 'admin' | 'staff'
+export type Role = 'admin' | 'lead' | 'staff'
 export type ProductStatus = 'active' | 'draft' | 'out'
 export type ArticleType = 'policy' | 'product' | 'training'
 export type MediaCategory = 'xuong' | 'feedback' | 'tonghop'
@@ -136,9 +136,19 @@ export interface MediaItem {
 }
 
 export const AVATAR_COLORS = [
-  '#1D9E75', '#E24B4A', '#378ADD', '#BA7517',
-  '#7C3AED', '#DB2777', '#059669', '#D97706'
+  '#E24B4A', '#378ADD', '#BA7517', '#7C3AED',
+  '#DB2777', '#059669', '#D97706', '#0891B2'
 ]
+
+export const AVATAR_COLOR_DEFAULT = '#1D9E75'
+
+export function getAvatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  }
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length]
+}
 
 export function getInitials(name: string) {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
@@ -165,11 +175,15 @@ export function articleTypeLabel(t: ArticleType) {
 }
 
 export function articleTypeClass(t: ArticleType) {
-  return t === 'policy' ? 'badge-green' : t === 'product' ? 'badge-amber' : 'badge-blue'
+  return t === 'policy' ? 'badge-red' : t === 'product' ? 'badge-green' : 'badge-blue'
 }
 
 export function mediaCatLabel(c: MediaCategory) {
   return c === 'xuong' ? 'Tư Liệu Xưởng' : c === 'feedback' ? 'Feedback KH' : 'Tổng Hợp'
+}
+
+export function mediaCatClass(c: MediaCategory) {
+  return c === 'xuong' ? 'badge-purple' : c === 'feedback' ? 'badge-blue' : 'badge-amber'
 }
 
 export function getStorageUrl(bucket: string, path: string) {

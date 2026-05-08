@@ -35,10 +35,18 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
   const { isAdmin } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    function check() { setIsMobile(window.innerWidth <= 680) }
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const supabase = createClient()
-    supabase.from('categories').select('*').order('sort_order').then(({ data }) => {
+    supabase.from('categories').select('*, products(id)').order('sort_order').then(({ data }) => {
       setCategories(data ?? [])
     })
   }, [])
@@ -49,17 +57,17 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       {open && (
         <div
           className="sidebar-overlay open"
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 14 }}
+          style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 14 }}
           onClick={onClose}
         />
       )}
 
       <div style={{
-        width: 220, background: 'var(--sf)', borderRight: '1px solid var(--bd)',
+        width: 253, background: 'var(--sf)', borderRight: '1px solid var(--bd)',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
         transition: 'transform .25s', zIndex: 15,
-        ...(typeof window !== 'undefined' && window.innerWidth <= 680
-          ? { position: 'fixed', top: 0, bottom: 0, left: 0, transform: open ? 'translateX(0)' : 'translateX(-100%)' }
+        ...(isMobile
+          ? { position: 'absolute', top: 0, bottom: 0, left: 0, transform: open ? 'translateX(0)' : 'translateX(-100%)' }
           : {})
       }} id="sidebar">
 
@@ -73,7 +81,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                   display: 'flex', alignItems: 'center', gap: '.5rem',
                   padding: '.52rem .65rem', borderRadius: 8, cursor: 'pointer',
                   color: active ? 'var(--gd)' : 'var(--mu)',
-                  fontWeight: active ? 600 : 500, fontSize: 13,
+                  fontWeight: active ? 700 : 600, fontSize: 13,
                   background: active ? 'var(--gl)' : 'transparent',
                   textDecoration: 'none', transition: 'all .15s',
                   marginBottom: '.12rem', border: 'none'
@@ -91,7 +99,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 display: 'flex', alignItems: 'center', gap: '.5rem',
                 padding: '.52rem .65rem', borderRadius: 8, cursor: 'pointer',
                 color: pathname === '/staff' ? 'var(--gd)' : 'var(--mu)',
-                fontWeight: pathname === '/staff' ? 600 : 500, fontSize: 13,
+                fontWeight: pathname === '/staff' ? 700 : 600, fontSize: 13,
                 background: pathname === '/staff' ? 'var(--gl)' : 'transparent',
                 textDecoration: 'none', transition: 'all .15s', border: 'none'
               }}
@@ -120,19 +128,23 @@ export function Sidebar({ open, onClose }: SidebarProps) {
                 style={{
                   display: 'flex', alignItems: 'center', gap: '.5rem',
                   padding: '.52rem .65rem', borderRadius: 8, cursor: 'pointer',
-                  color: active ? 'var(--gd)' : 'var(--mu)',
-                  fontWeight: active ? 600 : 500, fontSize: 13,
-                  background: active ? 'var(--gl)' : 'transparent',
+                  color: active ? '#fff' : 'var(--tx)',
+                  fontWeight: active ? 700 : 500, fontSize: 13,
+                  background: active ? 'var(--green)' : 'transparent',
                   textDecoration: 'none', transition: 'all .15s',
-                  marginBottom: '.12rem', border: 'none', whiteSpace: 'nowrap',
-                  overflow: 'hidden', textOverflow: 'ellipsis'
+                  marginBottom: '.12rem', border: 'none'
                 }}
               >
                 <svg style={{ width: 13, height: 13, flexShrink: 0 }} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/>
                   <rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/>
                 </svg>
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.name}</span>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+                {(() => { const count = (cat as any).products?.length ?? 0; return (
+                  <span style={{ flexShrink: 0, minWidth: 20, height: 18, padding: '0 5px', borderRadius: 9, background: active ? 'rgba(255,255,255,.25)' : count > 0 ? 'var(--green)' : 'var(--bg)', color: active ? '#fff' : count > 0 ? '#fff' : 'var(--mu)', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {count}
+                  </span>
+                )})()}
               </Link>
             )
           })}

@@ -20,7 +20,12 @@ export default function CategoriesPage() {
 
   async function load() {
     const supabase = createClient()
-    const { data } = await supabase.from('categories').select('*').order('sort_order')
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*, products!products_category_id_fkey(id)')
+      .order('sort_order')
+    if (error) console.error('categories load error:', error)
+    console.log('categories data:', data)
     setCats(data ?? [])
   }
 
@@ -67,12 +72,17 @@ export default function CategoriesPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Tên danh mục</th><th>Mô tả</th><th>Ngày tạo</th>{isAdmin && <th></th>}</tr>
+            <tr><th>Tên danh mục</th><th>Số SP</th><th>Mô tả</th><th>Ngày tạo</th>{isAdmin && <th></th>}</tr>
           </thead>
           <tbody>
             {cats.map(c => (
               <tr key={c.id}>
                 <td style={{ fontWeight: 600 }}>{c.name}</td>
+                <td>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 22, height: 22, padding: '0 6px', borderRadius: 11, background: (c as any).products?.length ? 'var(--green)' : 'var(--bg)', color: (c as any).products?.length ? '#fff' : 'var(--mu)', fontSize: 12, fontWeight: 700 }}>
+                    {(c as any).products?.length ?? 0}
+                  </span>
+                </td>
                 <td style={{ color: 'var(--mu)' }}>{c.description || '—'}</td>
                 <td style={{ color: 'var(--mu)' }}>{new Date(c.created_at).toLocaleDateString('vi-VN')}</td>
                 {isAdmin && (
@@ -90,7 +100,7 @@ export default function CategoriesPage() {
               </tr>
             ))}
             {cats.length === 0 && (
-              <tr><td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--mu)' }}>Chưa có danh mục</td></tr>
+              <tr><td colSpan={5} style={{ textAlign: 'center', padding: '2rem', color: 'var(--mu)' }}>Chưa có danh mục</td></tr>
             )}
           </tbody>
         </table>

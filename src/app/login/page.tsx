@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('admin@kimanh.vn')
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,6 +16,8 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     const supabase = createClient()
+    // Sign out any existing session to prevent session mixing between users
+    await supabase.auth.signOut().catch(() => {})
     const { error: err } = await supabase.auth.signInWithPassword({ email, password })
     if (err) {
       setError('Email hoặc mật khẩu không đúng.')

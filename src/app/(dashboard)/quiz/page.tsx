@@ -81,30 +81,43 @@ export default function QuizPage() {
           {quizzes.map(q => {
             const done = mySubmissionIds.has(q.id)
             const mySub = submissions.find(s => s.quiz_id === q.id && s.user_id === profile?.id)
+            const assignedUsers = (q.quiz_assignments ?? []).map(a => profiles.find(p => p.id === a.user_id)).filter(Boolean) as typeof profiles
+            const mySubCount = submissions.filter(s => s.quiz_id === q.id && s.user_id === profile?.id).length
+            const ps = q.pass_score
             return (
               <div key={q.id} style={{ background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 'var(--r)', marginBottom: '.75rem', overflow: 'hidden' }}>
                 <div style={{ padding: '.9rem 1.1rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '.75rem', flexWrap: 'wrap' }}>
-                  <div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 15, fontWeight: 700, marginBottom: '.25rem' }}>{q.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--mu)', display: 'flex', flexWrap: 'wrap', gap: '.5rem' }}>
-                      <span>{q.quiz_questions?.length ?? 0} câu hỏi</span>
+                    <div style={{ fontSize: 12, color: 'var(--mu)', display: 'flex', flexWrap: 'wrap', gap: '.3rem', alignItems: 'center', marginBottom: '.2rem' }}>
+                      <span>{q.quiz_questions?.length ?? 0} câu</span>
                       <span>·</span>
                       <span>{q.time_limit} phút</span>
                       <span>·</span>
-                      <span>Đạt: {q.pass_score}%</span>
+                      {assignedUsers.length > 0 ? (
+                        <span style={{ display: 'inline-flex', gap: '.2rem', alignItems: 'center' }}>
+                          {assignedUsers.slice(0, 4).map(p => (
+                            <span key={p.id} className="av-xs" style={{ background: p.avatar_color, width: 18, height: 18, fontSize: 8 }}>{p.full_name.slice(0,2).toUpperCase()}</span>
+                          ))}
+                          {assignedUsers.length > 4 && <span style={{ fontSize: 11 }}>+{assignedUsers.length - 4}</span>}
+                        </span>
+                      ) : <span>Tất cả</span>}
                     </div>
-                    {q.description && <div style={{ fontSize: 12.5, color: 'var(--mu)', marginTop: '.25rem' }}>{q.description}</div>}
-                  </div>
-                  <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                    {done && mySub && (
-                      <span className={`badge ${mySub.score >= q.pass_score ? 'badge-green' : 'badge-red'}`}>
-                        {mySub.score}% {mySub.score >= q.pass_score ? '✓' : '✗'}
-                      </span>
+                    {q.description && <div style={{ fontSize: 12.5, color: 'var(--mu)' }}>{q.description}</div>}
+                    {mySub && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginTop: '.4rem' }}>
+                        <span style={{ fontSize: 24, fontWeight: 800, color: mySub.score >= ps ? 'var(--gd)' : 'var(--red)' }}>{mySub.score}%</span>
+                        <span className={`badge ${mySub.score >= ps ? 'badge-green' : 'badge-red'}`}>{mySub.score >= ps ? 'Đạt' : 'Không đạt'}</span>
+                        <span style={{ fontSize: 11.5, color: 'var(--mu)' }}>{mySubCount}/3 lần đã làm</span>
+                      </div>
                     )}
-                    {!done && !isAdmin && (
+                    {!mySub && !isAdmin && <div style={{ fontSize: 12, color: 'var(--mu)', marginTop: '.3rem' }}>Chưa làm bài</div>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', alignItems: 'center', flexShrink: 0 }}>
+                    {(!done || isAdmin) && (
                       <button className="btn btn-primary btn-sm" onClick={() => setTakingQuiz(q)}>Làm bài</button>
                     )}
-                    {done && mySub && (
+                    {done && mySub && !isAdmin && (
                       <button className="btn btn-ghost btn-sm" onClick={() => setReviewSub(mySub)}>Xem kết quả</button>
                     )}
                     {isAdmin && (
@@ -114,6 +127,18 @@ export default function QuizPage() {
                       </>
                     )}
                   </div>
+                </div>
+                {/* Progress bar */}
+                <div style={{ height: 6, background: 'var(--bg)', display: 'flex', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.max(ps - 10, 0)}%`, background: '#F7C1C1' }} title={`F: 0-${Math.max(ps-10,0)}%`} />
+                  <div style={{ width: '10%', background: '#FAEEDA' }} title={`C: ${Math.max(ps-10,0)}-${ps}%`} />
+                  <div style={{ width: `${90 - ps}%`, background: '#B8E6D8' }} title={`B: ${ps}-90%`} />
+                  <div style={{ width: '10%', background: 'var(--green)' }} title="A: 90-100%" />
+                </div>
+                <div style={{ display: 'flex', fontSize: 10, color: 'var(--mu)', padding: '.18rem .75rem', justifyContent: 'space-between' }}>
+                  <span>0%</span>
+                  <span style={{ color: 'var(--red)' }}>Đạt: {ps}%</span>
+                  <span>100%</span>
                 </div>
               </div>
             )
@@ -223,53 +248,55 @@ function QuizCreateModal({ quiz, profiles, onClose, onSaved }: {
         <>
           <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
           <button className="btn btn-primary" onClick={save} disabled={saving || !title.trim()}>
-            {saving ? 'Đang lưu...' : 'Lưu'}
+            {saving ? 'Đang lưu...' : 'Lưu bài kiểm tra'}
           </button>
         </>
       }
     >
-      <div className="fg"><label>Tiêu đề *</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tên bài kiểm tra" /></div>
-      <div className="fg"><label>Mô tả</label><textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Mô tả..." style={{ minHeight: 60 }} /></div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.65rem' }}>
-        <div className="fg"><label>Thời gian (phút)</label><input type="number" value={timeLimit} onChange={e => setTimeLimit(+e.target.value)} min={1} /></div>
-        <div className="fg"><label>Điểm đạt (%)</label><input type="number" value={passScore} onChange={e => setPassScore(+e.target.value)} min={0} max={100} /></div>
+      {/* Tiêu đề và mô tả */}
+      <div className="fg">
+        <label>Tiêu đề bài kiểm tra *</label>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Nhập tiêu đề bài kiểm tra..." autoFocus />
+      </div>
+      <div className="fg">
+        <label>Mô tả (tùy chọn)</label>
+        <textarea value={desc} onChange={e => setDesc(e.target.value)} placeholder="Mô tả ngắn về nội dung bài kiểm tra..." style={{ minHeight: 58, resize: 'none' }} />
       </div>
 
-      <div style={{ marginBottom: '.5rem' }}>
-        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mu)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '.7rem' }}>Câu hỏi</div>
-        {questions.map((q, qi) => (
-          <div key={qi} style={{ background: 'var(--bg)', borderRadius: 10, padding: '.85rem', marginBottom: '.65rem', border: '1px solid var(--bd)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--mu)' }}>Câu {qi + 1}</span>
-              {questions.length > 1 && <button className="btn-icon danger" style={{ width: 24, height: 24 }} onClick={() => removeQ(qi)}>×</button>}
-            </div>
-            <div className="fg" style={{ marginBottom: '.5rem' }}>
-              <input value={q.question} onChange={e => updateQ(qi, 'question', e.target.value)} placeholder="Nội dung câu hỏi" />
-            </div>
-            {q.options.map((opt, oi) => (
-              <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.35rem' }}>
-                <input type="radio" name={`q${qi}`} checked={q.correct_index === oi} onChange={() => updateQ(qi, 'correct_index', oi)} style={{ accentColor: 'var(--green)', flexShrink: 0 }} />
-                <input value={opt} onChange={e => {
-                  const newOpts = [...q.options]
-                  newOpts[oi] = e.target.value
-                  updateQ(qi, 'options', newOpts)
-                }} placeholder={`Đáp án ${oi + 1}`}
-                  style={{ border: '1px solid var(--bd)', borderRadius: 8, padding: '.45rem .7rem', fontFamily: 'inherit', fontSize: 13, outline: 'none', flex: 1, background: q.correct_index === oi ? 'var(--gl)' : 'var(--sf)' }}
-                />
+      {/* Điểm đầu / thời gian / làm lại */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.65rem', marginBottom: '.9rem' }}>
+        <div className="fg" style={{ marginBottom: 0 }}><label>Điểm đầu (%)</label><input type="number" value={passScore} onChange={e => setPassScore(+e.target.value)} min={0} max={100} /></div>
+        <div className="fg" style={{ marginBottom: 0 }}><label>Thời gian (phút)</label><input type="number" value={timeLimit} onChange={e => setTimeLimit(+e.target.value)} min={1} /></div>
+        <div className="fg" style={{ marginBottom: 0 }}><label>Làm lại tối đa</label><input type="number" defaultValue={3} min={1} /></div>
+      </div>
+
+      {/* Tiêu chí chấm điểm */}
+      <div style={{ background: 'var(--bg)', border: '1px solid var(--bd)', borderRadius: 10, padding: '.75rem', marginBottom: '.9rem' }}>
+        <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mu)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '.6rem' }}>Tiêu chí chấm điểm</div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.45rem', marginBottom: '.5rem' }}>
+          {[
+            { grade: 'A', label: 'Xuất sắc', range: '90% – 100%', cls: 'badge-green' },
+            { grade: 'B', label: 'Giỏi', range: `${passScore}% – 89%`, cls: 'badge-blue' },
+            { grade: 'C', label: 'Đạt', range: `${Math.max(passScore - 10, 0)}% – ${passScore - 1}%`, cls: 'badge-amber' },
+            { grade: 'F', label: 'Không đạt', range: `0% – ${Math.max(passScore - 11, 0)}%`, cls: 'badge-red' },
+          ].map(g => (
+            <div key={g.grade} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 8, padding: '.45rem .65rem' }}>
+              <span className={`badge ${g.cls}`} style={{ fontSize: 12, fontWeight: 800, minWidth: 22, justifyContent: 'center' }}>{g.grade}</span>
+              <div>
+                <div style={{ fontSize: 12.5, fontWeight: 600 }}>{g.label}</div>
+                <div style={{ fontSize: 11, color: 'var(--mu)' }}>{g.range}</div>
               </div>
-            ))}
-          </div>
-        ))}
-        <button className="btn btn-secondary btn-sm btn-full" onClick={addQ}>
-          <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
-          Thêm câu hỏi
-        </button>
+            </div>
+          ))}
+        </div>
+        <div style={{ fontSize: 11, color: 'var(--mu)' }}>* Xuất sắc ≥90% · Giỏi ≥điểm đạt · Đạt ≥điểm đạt-10% · Không đạt &lt; điểm đạt-10%</div>
       </div>
 
+      {/* Phân công cho nhân viên */}
       {profiles.length > 0 && (
-        <div className="fg" style={{ marginTop: '.75rem' }}>
-          <label>Giao cho nhân viên</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.45rem', marginTop: '.35rem' }}>
+        <div style={{ marginBottom: '.9rem' }}>
+          <div style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mu)', textTransform: 'uppercase', letterSpacing: '.6px', marginBottom: '.5rem' }}>Phân công cho nhân viên</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.45rem' }}>
             {profiles.map(p => (
               <button key={p.id}
                 onClick={() => setAssigned(a => a.includes(p.id) ? a.filter(x => x !== p.id) : [...a, p.id])}
@@ -280,8 +307,49 @@ function QuizCreateModal({ quiz, profiles, onClose, onSaved }: {
               </button>
             ))}
           </div>
+          <div style={{ fontSize: 11, color: 'var(--mu)', marginTop: '.35rem' }}>Bỏ trống = tất cả nhân viên đều được làm</div>
         </div>
       )}
+
+      {/* Câu hỏi */}
+      <div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.6rem' }}>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>Câu hỏi</div>
+          <button className="btn btn-secondary btn-sm" onClick={addQ}>
+            <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
+            Thêm câu
+          </button>
+        </div>
+        {questions.map((q, qi) => (
+          <div key={qi} style={{ background: 'var(--bg)', borderRadius: 10, padding: '.85rem', marginBottom: '.65rem', border: '1px solid var(--bd)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.5rem' }}>
+              <span style={{ fontSize: 12, fontWeight: 700 }}>Câu {qi + 1}</span>
+              {questions.length > 1 && <button className="btn-icon danger" style={{ width: 24, height: 24 }} onClick={() => removeQ(qi)}>×</button>}
+            </div>
+            <div className="fg" style={{ marginBottom: '.45rem' }}>
+              <textarea value={q.question} onChange={e => updateQ(qi, 'question', e.target.value)} placeholder="Nội dung câu hỏi..." style={{ minHeight: 60, resize: 'none' }} />
+            </div>
+            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--mu)', textTransform: 'uppercase', letterSpacing: '.5px', marginBottom: '.35rem' }}>Ảnh minh họa (tùy chọn)</div>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '.45rem', border: '1.5px dashed var(--bd)', borderRadius: 8, padding: '.55rem', cursor: 'pointer', marginBottom: '.55rem', fontSize: 12, color: 'var(--mu)', background: 'var(--sf)' }}>
+              <input type="file" accept="image/*" style={{ display: 'none' }} />
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 10l3.5-3.5 3 3 2-2 4 4"/></svg>
+              Chọn ảnh
+            </label>
+            {['A', 'B', 'C', 'D'].map((letter, oi) => (
+              <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: '.5rem', marginBottom: '.38rem' }}>
+                <input type="radio" name={`q${qi}`} checked={q.correct_index === oi} onChange={() => updateQ(qi, 'correct_index', oi)} style={{ accentColor: 'var(--green)', flexShrink: 0 }} />
+                <input value={q.options[oi] ?? ''} onChange={e => {
+                  const newOpts = [...q.options]
+                  newOpts[oi] = e.target.value
+                  updateQ(qi, 'options', newOpts)
+                }} placeholder={`Đáp án ${letter}`}
+                  style={{ border: '1px solid var(--bd)', borderRadius: 8, padding: '.45rem .7rem', fontFamily: 'inherit', fontSize: 13, outline: 'none', flex: 1, background: q.correct_index === oi ? 'var(--gl)' : 'var(--sf)' }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
     </Modal>
   )
 }
