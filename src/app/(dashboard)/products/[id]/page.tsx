@@ -182,12 +182,24 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
     window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank', 'width=600,height=400')
   }
 
-  function shareToZalo(url: string) {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ url }).catch(() => {})
-    } else {
-      navigator.clipboard.writeText(url)
+  async function shareToZalo(url: string) {
+    try {
+      const res = await fetch(url)
+      const blob = await res.blob()
+      const filename = url.split('/').pop()?.split('?')[0] ?? 'image.jpg'
+      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
+      if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: filename })
+        return
+      }
+      if (navigator.share) {
+        await navigator.share({ url, title: filename })
+        return
+      }
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') return
     }
+    navigator.clipboard.writeText(url)
   }
 
   function copyLink(url: string) {
