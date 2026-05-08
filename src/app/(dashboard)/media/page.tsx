@@ -45,8 +45,9 @@ export default function MediaPage() {
     try {
       const res = await fetch(url)
       const blob = await res.blob()
-      const filename = url.split('/').pop()?.split('?')[0] ?? 'image.jpg'
-      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
+      const rawName = url.split('/').pop()?.split('?')[0] ?? 'image.jpg'
+      const filename = rawName.replace(/\.[^.]+$/, '')
+      const file = new File([blob], rawName, { type: blob.type || 'image/jpeg' })
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: filename })

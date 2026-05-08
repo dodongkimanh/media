@@ -64,8 +64,9 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
     try {
       const res = await fetch(cur.url)
       const blob = await res.blob()
-      const filename = cur.url.split('/').pop()?.split('?')[0] ?? (isVideo ? 'video.mp4' : 'image.jpg')
-      const file = new File([blob], filename, { type: blob.type })
+      const rawName = cur.url.split('/').pop()?.split('?')[0] ?? (isVideo ? 'video.mp4' : 'image.jpg')
+      const filename = rawName.replace(/\.[^.]+$/, '')
+      const file = new File([blob], rawName, { type: blob.type })
 
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({ files: [file], title: filename })
