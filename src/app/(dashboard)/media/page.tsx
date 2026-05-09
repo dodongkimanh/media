@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Toast } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { uploadFile, deleteStorageFile } from '@/lib/upload'
+import { convertVideoToH264 } from '@/lib/videoConvert'
 import { Lightbox } from '@/components/ui/Lightbox'
 import type { MediaAlbum, MediaItem, MediaCategory } from '@/lib/types'
 import { mediaCatLabel, mediaCatClass, fmtDate } from '@/lib/types'
@@ -21,6 +22,7 @@ export default function MediaPage() {
   const [editAlbum, setEditAlbum] = useState<MediaAlbum | null>(null)
   const [lightbox, setLightbox] = useState<{ items: { url: string; type?: 'image' | 'video' }[]; idx: number } | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
   const [shareOpenId, setShareOpenId] = useState<string | null>(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const { toast, show, clear } = useToast()
@@ -91,15 +93,23 @@ export default function MediaPage() {
     if (!viewAlbum || !files.length) return
     setUploading(true)
     const supabase = createClient()
-    for (const file of files) {
-      const isVid = file.type.startsWith('video/')
+    for (let i = 0; i < files.length; i++) {
+      let file = files[i]
+      if (file.type.startsWith('video/')) {
+        setUploadStatus(`Đang chuyển đổi video ${i + 1}/${files.length}... 0%`)
+        file = await convertVideoToH264(file, pct => {
+          setUploadStatus(`Đang chuyển đổi video ${i + 1}/${files.length}... ${pct}%`)
+        })
+      }
+      setUploadStatus(`Đang tải lên ${i + 1}/${files.length}...`)
       const url = await uploadFile(file, 'media', viewAlbum.id)
       await supabase.from('media_items').insert({
-        album_id: viewAlbum.id, url, type: isVid ? 'video' : 'image',
-        sort_order: albumItems.length
+        album_id: viewAlbum.id, url, type: file.type.startsWith('video/') ? 'video' : 'image',
+        sort_order: albumItems.length + i
       })
     }
     setUploading(false)
+    setUploadStatus('')
     show('Đã tải lên thành công')
     loadAlbumItems(viewAlbum.id)
     loadAlbums()
@@ -177,7 +187,7 @@ export default function MediaPage() {
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
-                {uploading ? 'Đang tải lên...' : 'Thêm ảnh/video'}
+                {uploading ? (uploadStatus || 'Đang xử lý...') : 'Thêm ảnh/video'}
               </button>
             )}
           </div>
@@ -387,6 +397,7 @@ function AddMediaModal({ album, existingItems, onClose, onSaved }: {
   const [libSelected, setLibSelected] = useState<Set<string>>(new Set())
   const [libLoading, setLibLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('')
 
   useEffect(() => { loadLib() }, [])
 
@@ -440,10 +451,16 @@ function AddMediaModal({ album, existingItems, onClose, onSaved }: {
     const supabase = createClient()
     const baseOrder = existingItems.length
     for (let i = 0; i < newFiles.length; i++) {
-      const file = newFiles[i]
-      const isVid = file.type.startsWith('video/')
+      let file = newFiles[i]
+      if (file.type.startsWith('video/')) {
+        setSaveStatus(`Đang chuyển đổi video ${i + 1}/${newFiles.length}... 0%`)
+        file = await convertVideoToH264(file, pct => {
+          setSaveStatus(`Đang chuyển đổi video ${i + 1}/${newFiles.length}... ${pct}%`)
+        })
+      }
+      setSaveStatus(`Đang tải lên ${i + 1}/${newFiles.length}...`)
       const url = await uploadFile(file, 'media', album.id)
-      await supabase.from('media_items').insert({ album_id: album.id, url, type: isVid ? 'video' : 'image', sort_order: baseOrder + i })
+      await supabase.from('media_items').insert({ album_id: album.id, url, type: file.type.startsWith('video/') ? 'video' : 'image', sort_order: baseOrder + i })
     }
     const libArr = libItems.filter(it => libSelected.has(it.id))
     for (let i = 0; i < libArr.length; i++) {
@@ -451,6 +468,7 @@ function AddMediaModal({ album, existingItems, onClose, onSaved }: {
       await supabase.from('media_items').insert({ album_id: album.id, url: it.url, type: it.type, caption: it.caption, sort_order: baseOrder + newFiles.length + i })
     }
     setSaving(false)
+    setSaveStatus('')
     onSaved()
   }
 
@@ -460,9 +478,14 @@ function AddMediaModal({ album, existingItems, onClose, onSaved }: {
     <Modal open onClose={onClose} title="Thêm ảnh/video vào album" maxWidth={520} scrollable
       footer={
         <>
+          {saving && saveStatus && (
+            <div style={{ flex: 1, fontSize: 12, color: '#085041', background: '#E6F4EE', border: '1px solid #A3D9C3', borderRadius: 8, padding: '.35rem .7rem', fontWeight: 600 }}>
+              ⏳ {saveStatus}
+            </div>
+          )}
           <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
           <button className="btn btn-primary" onClick={save} disabled={saving || totalSelected === 0}>
-            {saving ? 'Đang lưu...' : `Thêm${totalSelected ? ` (${totalSelected} file)` : ''}`}
+            {saving ? 'Đang xử lý...' : `Thêm${totalSelected ? ` (${totalSelected} file)` : ''}`}
           </button>
         </>
       }
@@ -547,6 +570,7 @@ function AlbumModal({ album, profileId, onClose, onSaved }: {
   const [desc, setDesc] = useState(album?.description ?? '')
   const [cat, setCat] = useState<MediaCategory>(album?.category ?? 'tonghop')
   const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('')
   const [activeTab, setActiveTab] = useState<'upload' | 'library'>(album ? 'library' : 'upload')
   const [newFiles, setNewFiles] = useState<File[]>([])
   const [newPreviews, setNewPreviews] = useState<string[]>([])
@@ -627,10 +651,16 @@ function AlbumModal({ album, profileId, onClose, onSaved }: {
     }
     if (albumId) {
       for (let i = 0; i < newFiles.length; i++) {
-        const file = newFiles[i]
-        const isVid = file.type.startsWith('video/')
+        let file = newFiles[i]
+        if (file.type.startsWith('video/')) {
+          setSaveStatus(`Đang chuyển đổi video ${i + 1}/${newFiles.length}... 0%`)
+          file = await convertVideoToH264(file, pct => {
+            setSaveStatus(`Đang chuyển đổi video ${i + 1}/${newFiles.length}... ${pct}%`)
+          })
+        }
+        setSaveStatus(`Đang tải lên ${i + 1}/${newFiles.length}...`)
         const url = await uploadFile(file, 'media', albumId)
-        await supabase.from('media_items').insert({ album_id: albumId, url, type: isVid ? 'video' : 'image', sort_order: i })
+        await supabase.from('media_items').insert({ album_id: albumId, url, type: file.type.startsWith('video/') ? 'video' : 'image', sort_order: i })
       }
       const libArr = libItems.filter(it => libSelected.has(it.id))
       for (let i = 0; i < libArr.length; i++) {
@@ -639,6 +669,7 @@ function AlbumModal({ album, profileId, onClose, onSaved }: {
       }
     }
     setSaving(false)
+    setSaveStatus('')
     onSaved(albumId)
   }
 
@@ -653,9 +684,14 @@ function AlbumModal({ album, profileId, onClose, onSaved }: {
       scrollable
       footer={
         <>
+          {saving && saveStatus && (
+            <div style={{ flex: 1, fontSize: 12, color: '#085041', background: '#E6F4EE', border: '1px solid #A3D9C3', borderRadius: 8, padding: '.35rem .7rem', fontWeight: 600 }}>
+              ⏳ {saveStatus}
+            </div>
+          )}
           <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
           <button className="btn btn-primary" onClick={save} disabled={saving || !title.trim()}>
-            {saving ? 'Đang lưu...' : `Lưu${totalSelected ? ` (${totalSelected} ảnh/video)` : ''}`}
+            {saving ? 'Đang xử lý...' : `Lưu${totalSelected ? ` (${totalSelected} ảnh/video)` : ''}`}
           </button>
         </>
       }

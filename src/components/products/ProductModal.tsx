@@ -290,6 +290,7 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState('')
 
   useEffect(() => { loadItems() }, [])
 
@@ -308,10 +309,27 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
     if (!files.length) return
     setUploading(true)
     try {
-      await uploadToMediaLibrary(Array.from(files))
+      const { convertVideoToH264 } = await import('@/lib/videoConvert')
+      const arr = Array.from(files)
+      const processed: File[] = []
+      for (let i = 0; i < arr.length; i++) {
+        const file = arr[i]
+        if (file.type.startsWith('video/')) {
+          setUploadStatus(`Đang chuyển đổi video ${i + 1}/${arr.length}... 0%`)
+          const converted = await convertVideoToH264(file, pct => {
+            setUploadStatus(`Đang chuyển đổi video ${i + 1}/${arr.length}... ${pct}%`)
+          })
+          processed.push(converted)
+        } else {
+          processed.push(file)
+        }
+      }
+      setUploadStatus(`Đang tải lên thư viện...`)
+      await uploadToMediaLibrary(processed)
       await loadItems()
     } finally {
       setUploading(false)
+      setUploadStatus('')
     }
   }
 
@@ -359,7 +377,10 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
       {compact && (
         <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
       )}
-      {uploading ? 'Đang tải lên...' : compact ? 'Tải ảnh/video lên thư viện' : 'Click hoặc kéo thả ảnh/video để tải lên thư viện'}
+      {uploading
+        ? (uploadStatus || (compact ? 'Đang xử lý...' : 'Đang xử lý...'))
+        : compact ? 'Tải ảnh/video lên thư viện' : 'Click hoặc kéo thả ảnh/video để tải lên thư viện'
+      }
     </label>
   )
 
@@ -379,9 +400,14 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
         </>
       }
     >
+      {uploading && uploadStatus && (
+        <div style={{ marginBottom: '.6rem', background: '#E6F4EE', border: '1px solid #A3D9C3', borderRadius: 'var(--r)', padding: '.45rem .7rem', fontSize: 12, color: '#085041', fontWeight: 600 }}>
+          ⏳ {uploadStatus}
+        </div>
+      )}
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>Đang tải thư viện...</div>
-      ) : items.length === 0 ? (
+      ) : items.length === 0 && !uploading ? (
         <div>
           <div style={{ textAlign: 'center', padding: '1rem 0 .75rem', color: 'var(--mu)', fontSize: 13 }}>
             Thư viện chưa có ảnh/video nào. Hãy tải lên để tiếp tục.
