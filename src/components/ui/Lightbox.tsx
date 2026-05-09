@@ -124,9 +124,7 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
   }
 
   return (
-    <div id="lightbox" className="open" onClick={onClose}>
-      <div className="lb-box" onClick={e => e.stopPropagation()}>
-
+    <div id="lightbox" className="open">
       {/* Counter top-left */}
       <div style={{
         position: 'absolute',
@@ -248,8 +246,6 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
             {shareLabel}
           </span>
         )}
-      </div>
-
       </div>
     </div>
   )
