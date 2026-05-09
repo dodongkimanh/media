@@ -88,7 +88,7 @@ export default function ProductsPage() {
       </div>
 
       {/* Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(170px,1fr))', gap: '.85rem', padding: '1rem 1.2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(148px,1fr))', gap: '.85rem', padding: '1rem 1.2rem' }}>
         {loading && Array(6).fill(0).map((_, i) => (
           <div key={i} style={{ background: 'var(--sf)', border: '1px solid var(--bd)', borderRadius: 'var(--rl)', height: 240, opacity: .4 }} />
         ))}
@@ -98,7 +98,7 @@ export default function ProductsPage() {
               {p.images?.[0]
                 ? <img src={p.images[0]} alt={p.name} />
                 : p.videos?.[0]
-                  ? <video src={p.videos[0]} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? <video src={`${p.videos[0]}#t=0.001`} preload="metadata" muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : (
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--mu)', gap: '.3rem' }}>
                       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
@@ -297,7 +297,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
           <div className="gthumbs">
             {urls.map((u, i) => (
               <div key={i} className={`gth${isVideo(u) ? ' gth-v' : ''}${i === idx ? ' active' : ''}`} onClick={() => i === idx ? setLightbox({ items: mediaItems, idx: i }) : setIdx(i)}>
-                {isVideo(u) ? <video src={u} preload="metadata" /> : <img src={u} alt="" />}
+                {isVideo(u) ? <video src={`${u}#t=0.001`} preload="metadata" muted playsInline /> : <img src={u} alt="" />}
                 {isVideo(u) && <VideoBadge />}
               </div>
             ))}
@@ -347,7 +347,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
                 <div key={i} className={`gth${m.type === 'video' ? ' gth-v' : ''}${i === mainIdx ? ' active' : ''}`}
                   onClick={() => i === mainIdx ? setLightbox({ items: allMedia, idx: i }) : setMainIdx(i)}
                 >
-                  {m.type === 'video' ? <video src={m.url} preload="metadata" /> : <img src={m.url} alt="" />}
+                  {m.type === 'video' ? <video src={`${m.url}#t=0.001`} preload="metadata" muted playsInline /> : <img src={m.url} alt="" />}
                   {m.type === 'video' && <VideoBadge />}
                 </div>
               ))}
