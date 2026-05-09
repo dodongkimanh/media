@@ -105,6 +105,7 @@ export default function ProductsPage() {
                     </div>
                   )
               }
+              {!p.images?.[0] && p.videos?.[0] && <VideoBadge />}
               <span className={`badge ${statusClass(p.status)}`} style={{ position: 'absolute', top: '.45rem', right: '.45rem' }}>
                 {statusLabel(p.status)}
               </span>
@@ -297,6 +298,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
             {urls.map((u, i) => (
               <div key={i} className={`gth${isVideo(u) ? ' gth-v' : ''}${i === idx ? ' active' : ''}`} onClick={() => i === idx ? setLightbox({ items: mediaItems, idx: i }) : setIdx(i)}>
                 {isVideo(u) ? <video src={u} preload="metadata" /> : <img src={u} alt="" />}
+                {isVideo(u) && <VideoBadge />}
               </div>
             ))}
           </div>
@@ -346,6 +348,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
                   onClick={() => i === mainIdx ? setLightbox({ items: allMedia, idx: i }) : setMainIdx(i)}
                 >
                   {m.type === 'video' ? <video src={m.url} preload="metadata" /> : <img src={m.url} alt="" />}
+                  {m.type === 'video' && <VideoBadge />}
                 </div>
               ))}
             </div>
@@ -515,5 +518,13 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
         <Lightbox items={lightbox.items} initialIndex={lightbox.idx} onClose={() => setLightbox(null)} />
       )}
     </div>
+  )
+}
+
+function VideoBadge() {
+  return (
+    <span className="vid-badge">
+      <svg width="10" height="10" viewBox="0 0 16 16" fill="white"><polygon points="4,2 14,8 4,14"/></svg>
+    </span>
   )
 }

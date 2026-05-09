@@ -169,7 +169,7 @@ tbody td { padding: .6rem .95rem; font-size: 13px; vertical-align: middle; }
 
 /* ── PRODUCT DETAIL ── */
 .dwrap { padding: 1.25rem 1.75rem; width: 100%; }
-.gmain { width: 100%; height: 650px; border-radius: var(--rl); overflow: hidden; background: var(--bg); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; }
+.gmain { width: 100%; height: 500px; border-radius: var(--rl); overflow: hidden; background: var(--bg); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; }
 .gmain img { width: 100%; height: 100%; object-fit: contain; transition: opacity .15s; cursor: zoom-in; }
 .gmain img:hover { opacity: .88; }
 .gmain video { width: 100%; height: 100%; object-fit: contain; background: #111; }
@@ -177,6 +177,9 @@ tbody td { padding: .6rem .95rem; font-size: 13px; vertical-align: middle; }
 .gth { width: 68px; height: 68px; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: border .15s; flex-shrink: 0; position: relative; background: var(--bg); }
 .gth.active { border-color: var(--green); }
 .gth img, .gth video { width: 100%; height: 100%; object-fit: cover; }
+.vid-badge { position: absolute; bottom: 3px; left: 3px; background: rgba(0,0,0,.62); border-radius: 4px; display: flex; align-items: center; justify-content: center; padding: 2px 4px; gap: 2px; pointer-events: none; }
+.vid-badge svg { display: block; }
+.mi-vid-badge { position: absolute; bottom: 4px; left: 4px; background: rgba(0,0,0,.62); color: #fff; border-radius: 4px; font-size: 9px; font-weight: 700; padding: 1px 5px; pointer-events: none; letter-spacing: .3px; }
 .dcols { display: grid; grid-template-columns: 1fr 1fr; gap: .9rem; margin-top: .9rem; }
 .ibox { background: var(--sf); border: 1px solid var(--bd); border-radius: var(--rl); padding: 1rem 1.1rem; }
 .ibox h3 { font-size: 10.5px; font-weight: 700; color: var(--mu); text-transform: uppercase; letter-spacing: .6px; margin-bottom: .8rem; }
@@ -197,8 +200,8 @@ tbody td { padding: .6rem .95rem; font-size: 13px; vertical-align: middle; }
 .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: .85rem; }
 .section-title { font-size: 12px; font-weight: 700; color: var(--mu); text-transform: uppercase; letter-spacing: .6px; }
 @media (max-width: 860px) { .dcols { grid-template-columns: 1fr; } }
-@media (max-width: 860px) { .gmain { height: 400px; } }
-@media (max-width: 680px) { .gmain { height: 260px; } .dwrap { padding: .75rem; } }
+@media (max-width: 860px) { .gmain { height: 350px; } }
+@media (max-width: 680px) { .gmain { height: 230px; } .dwrap { padding: .75rem; } }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
