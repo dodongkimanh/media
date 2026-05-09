@@ -318,7 +318,9 @@ export default function MediaPage() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: '.85rem', padding: '1rem 1.2rem' }}>
         {albums.map(album => {
-          const cover = album.media_items?.[0]?.url ?? album.cover_url
+          const firstItem = album.media_items?.[0]
+          const cover = firstItem?.url ?? album.cover_url
+          const coverIsVideo = firstItem?.type === 'video' || /\.(mp4|mov|webm|avi)$/i.test(firstItem?.url ?? '')
           const count = album.media_items?.length ?? 0
           return (
             <div key={album.id} onClick={() => openAlbum(album)}
@@ -328,7 +330,9 @@ export default function MediaPage() {
             >
               <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--bg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {cover
-                  ? <img src={cover} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ? coverIsVideo
+                    ? <video src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted preload="metadata" />
+                    : <img src={cover} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : (
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" strokeWidth="1" style={{ opacity: .35 }}>
                       <path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/>
