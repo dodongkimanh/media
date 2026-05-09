@@ -291,6 +291,8 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
   const [loading, setLoading] = useState(true)
   const [uploading, setUploading] = useState(false)
   const [uploadStatus, setUploadStatus] = useState('')
+  const [uploadError, setUploadError] = useState('')
+  const [uploadDone, setUploadDone] = useState(0)
 
   useEffect(() => { loadItems() }, [])
 
@@ -308,6 +310,8 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
   async function handleUpload(files: FileList) {
     if (!files.length) return
     setUploading(true)
+    setUploadError('')
+    setUploadDone(0)
     try {
       const { convertVideoToH264 } = await import('@/lib/videoConvert')
       const arr = Array.from(files)
@@ -315,7 +319,7 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
       for (let i = 0; i < arr.length; i++) {
         const file = arr[i]
         if (file.type.startsWith('video/')) {
-          setUploadStatus(`Đang chuyển đổi video ${i + 1}/${arr.length}... 0%`)
+          setUploadStatus(`Đang chuyển đổi video ${i + 1}/${arr.length}...`)
           const converted = await convertVideoToH264(file, pct => {
             setUploadStatus(`Đang chuyển đổi video ${i + 1}/${arr.length}... ${pct}%`)
           })
@@ -324,9 +328,14 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
           processed.push(file)
         }
       }
-      setUploadStatus(`Đang tải lên thư viện...`)
+      setUploadStatus('Đang tải lên thư viện...')
       await uploadToMediaLibrary(processed)
+      setUploadStatus('Đang cập nhật danh sách...')
       await loadItems()
+      setUploadDone(arr.length)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setUploadError(msg || 'Tải lên thất bại. Vui lòng thử lại.')
     } finally {
       setUploading(false)
       setUploadStatus('')
@@ -403,6 +412,16 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
       {uploading && uploadStatus && (
         <div style={{ marginBottom: '.6rem', background: '#E6F4EE', border: '1px solid #A3D9C3', borderRadius: 'var(--r)', padding: '.45rem .7rem', fontSize: 12, color: '#085041', fontWeight: 600 }}>
           ⏳ {uploadStatus}
+        </div>
+      )}
+      {uploadError && (
+        <div style={{ marginBottom: '.6rem', background: '#FEF0F0', border: '1px solid #F7C1C1', borderRadius: 'var(--r)', padding: '.45rem .7rem', fontSize: 12, color: '#b91c1c', fontWeight: 600 }}>
+          ❌ {uploadError}
+        </div>
+      )}
+      {uploadDone > 0 && !uploading && (
+        <div style={{ marginBottom: '.6rem', background: '#E6F4EE', border: '1px solid #A3D9C3', borderRadius: 'var(--r)', padding: '.45rem .7rem', fontSize: 12, color: '#085041', fontWeight: 600 }}>
+          ✅ Đã tải lên {uploadDone} file thành công
         </div>
       )}
       {loading ? (
