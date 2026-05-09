@@ -95,13 +95,15 @@ export default function ProductsPage() {
         {!loading && filtered.map(p => (
           <div key={p.id} className="pcard" onClick={() => openProduct(p)}>
             <div className="pthumb">
-              {p.images[0]
+              {p.images?.[0]
                 ? <img src={p.images[0]} alt={p.name} />
-                : (
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--mu)', gap: '.3rem' }}>
-                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-                  </div>
-                )
+                : p.videos?.[0]
+                  ? <video src={p.videos[0]} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  : (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', color: 'var(--mu)', gap: '.3rem' }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                    </div>
+                  )
               }
               <span className={`badge ${statusClass(p.status)}`} style={{ position: 'absolute', top: '.45rem', right: '.45rem' }}>
                 {statusLabel(p.status)}
@@ -208,8 +210,8 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
 
   type MediaItem = { url: string; type?: 'image' | 'video' }
   const allMedia: MediaItem[] = [
-    ...product.images.map(u => ({ url: u, type: 'image' as const })),
-    ...product.videos.map(u => ({ url: u, type: 'video' as const }))
+    ...(product.images ?? []).map(u => ({ url: u, type: 'image' as const })),
+    ...(product.videos ?? []).map(u => ({ url: u, type: 'video' as const }))
   ]
 
   async function saveDiscount() {
@@ -503,10 +505,10 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
         </div>
 
         {/* Feedback media */}
-        <MediaSection title="Ảnh / Video Feedback khách hàng" urls={product.feedback_media} idx={fbIdx} setIdx={setFbIdx} />
+        <MediaSection title="Ảnh / Video Feedback khách hàng" urls={product.feedback_media ?? []} idx={fbIdx} setIdx={setFbIdx} />
 
         {/* Related media */}
-        <MediaSection title="Ảnh sản phẩm cùng loại tham khảo" urls={product.related_media} idx={relIdx} setIdx={setRelIdx} />
+        <MediaSection title="Ảnh sản phẩm cùng loại tham khảo" urls={product.related_media ?? []} idx={relIdx} setIdx={setRelIdx} />
       </div>
 
       {lightbox && (
