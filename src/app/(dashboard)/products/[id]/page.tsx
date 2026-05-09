@@ -186,14 +186,14 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
     try {
       const res = await fetch(url)
       const blob = await res.blob()
-      const filename = url.split('/').pop()?.split('?')[0] ?? 'image.jpg'
-      const file = new File([blob], filename, { type: blob.type || 'image/jpeg' })
+      const rawName = url.split('/').pop()?.split('?')[0] ?? 'image.jpg'
+      const file = new File([blob], rawName, { type: blob.type || 'image/jpeg' })
       if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ files: [file], title: filename })
+        await navigator.share({ files: [file] })
         return
       }
       if (navigator.share) {
-        await navigator.share({ url, title: filename })
+        await navigator.share({ url })
         return
       }
     } catch (err: unknown) {
@@ -241,7 +241,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
     return (
       <div className="ibox" style={{ marginTop: '.9rem' }}>
         <div className="section-hdr"><span className="section-title">{title}</span></div>
-        <div style={{ maxWidth: 500, margin: '0 auto' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto' }}>
           <div className="gmain">
             {curIsVid
               ? <video src={cur} controls style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#111' }} />
@@ -294,7 +294,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
           <div className="gthumbs">
             {urls.map((u, i) => (
               <div key={i} className={`gth${isVideo(u) ? ' gth-v' : ''}${i === idx ? ' active' : ''}`} onClick={() => i === idx ? setLightbox({ items: mediaItems, idx: i }) : setIdx(i)}>
-                {isVideo(u) ? <video src={u} /> : <img src={u} alt="" />}
+                {isVideo(u) ? <video src={u} preload="metadata" /> : <img src={u} alt="" />}
               </div>
             ))}
           </div>
@@ -323,7 +323,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
       <div className="dwrap">
         {/* Gallery - centered max 500px */}
         <div style={{ marginBottom: '.9rem' }}>
-          <div style={{ maxWidth: 500, margin: '0 auto' }}>
+          <div style={{ maxWidth: 800, margin: '0 auto' }}>
             <div className="gmain">
               {allMedia.length ? (
                 allMedia[mainIdx]?.type === 'video'
@@ -343,7 +343,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
                 <div key={i} className={`gth${m.type === 'video' ? ' gth-v' : ''}${i === mainIdx ? ' active' : ''}`}
                   onClick={() => i === mainIdx ? setLightbox({ items: allMedia, idx: i }) : setMainIdx(i)}
                 >
-                  {m.type === 'video' ? <video src={m.url} /> : <img src={m.url} alt="" />}
+                  {m.type === 'video' ? <video src={m.url} preload="metadata" /> : <img src={m.url} alt="" />}
                 </div>
               ))}
             </div>

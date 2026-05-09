@@ -169,7 +169,7 @@ tbody td { padding: .6rem .95rem; font-size: 13px; vertical-align: middle; }
 
 /* ── PRODUCT DETAIL ── */
 .dwrap { padding: 1.25rem 1.75rem; width: 100%; }
-.gmain { width: 100%; height: 500px; border-radius: var(--rl); overflow: hidden; background: var(--bg); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; }
+.gmain { width: 100%; height: 800px; border-radius: var(--rl); overflow: hidden; background: var(--bg); border: 1px solid var(--bd); display: flex; align-items: center; justify-content: center; }
 .gmain img { width: 100%; height: 100%; object-fit: contain; transition: opacity .15s; cursor: zoom-in; }
 .gmain img:hover { opacity: .88; }
 .gmain video { width: 100%; height: 100%; object-fit: contain; background: #111; }
@@ -197,7 +197,8 @@ tbody td { padding: .6rem .95rem; font-size: 13px; vertical-align: middle; }
 .section-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: .85rem; }
 .section-title { font-size: 12px; font-weight: 700; color: var(--mu); text-transform: uppercase; letter-spacing: .6px; }
 @media (max-width: 860px) { .dcols { grid-template-columns: 1fr; } }
-@media (max-width: 680px) { .gmain { height: 230px; } .dwrap { padding: .75rem; } }
+@media (max-width: 860px) { .gmain { height: 500px; } }
+@media (max-width: 680px) { .gmain { height: 280px; } .dwrap { padding: .75rem; } }
 
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
