@@ -349,15 +349,14 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
   onConfirm: (urls: string[]) => void
   onClose: () => void
 }) {
-  const [items, setItems] = useState<{ id: string; url: string; caption: string | null }[]>([])
+  const [items, setItems] = useState<{ id: string; url: string; type: string | null; caption: string | null }[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     createClient()
       .from('media_items')
-      .select('id, url, caption')
-      .eq('type', 'image')
+      .select('id, url, type, caption')
       .order('created_at', { ascending: false })
       .limit(300)
       .then(({ data }) => { setItems(data ?? []); setLoading(false) })
@@ -375,14 +374,14 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
     <Modal
       open
       onClose={onClose}
-      title={`Chọn ảnh từ Thư Viện${selected.size ? ` (${selected.size} đã chọn)` : ''}`}
+      title={`Chọn ảnh/video từ Thư Viện${selected.size ? ` (${selected.size} đã chọn)` : ''}`}
       maxWidth={620}
       scrollable
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
           <button className="btn btn-primary" onClick={() => onConfirm(Array.from(selected))} disabled={selected.size === 0}>
-            Thêm {selected.size || ''} ảnh vào đây
+            Thêm {selected.size || ''} file vào đây
           </button>
         </>
       }
@@ -391,25 +390,36 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>Đang tải thư viện...</div>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>
-          Thư viện chưa có ảnh nào. Hãy tải ảnh lên trong mục Ảnh Video Tư Liệu trước.
+          Thư viện chưa có ảnh/video nào. Hãy tải lên trong mục Ảnh Video Tư Liệu trước.
         </div>
       ) : (
         <>
           <div style={{ fontSize: 12, color: 'var(--mu)', marginBottom: '.65rem' }}>
-            Click để chọn/bỏ chọn ảnh. Ảnh đã chọn có viền xanh.
+            Click để chọn/bỏ chọn. File đã chọn có viền xanh.
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(88px,1fr))', gap: '.45rem' }}>
-            {items.map(it => (
-              <div key={it.id} onClick={() => toggle(it.url)}
-                style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', cursor: 'pointer', border: selected.has(it.url) ? '2.5px solid var(--green)' : '2.5px solid transparent', background: 'var(--bg)', transition: 'border-color .12s' }}>
-                <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
-                {selected.has(it.url) && (
-                  <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }}>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M2 5l2.5 2.5L8 3"/></svg>
-                  </div>
-                )}
-              </div>
-            ))}
+            {items.map(it => {
+              const isVid = it.type === 'video' || /\.(mp4|mov|webm|avi)$/i.test(it.url)
+              return (
+                <div key={it.id} onClick={() => toggle(it.url)}
+                  style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', cursor: 'pointer', border: selected.has(it.url) ? '2.5px solid var(--green)' : '2.5px solid transparent', background: 'var(--bg)', transition: 'border-color .12s' }}>
+                  {isVid
+                    ? <video src={it.url} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    : <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
+                  }
+                  {isVid && (
+                    <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,.62)', borderRadius: 4, display: 'flex', alignItems: 'center', padding: '2px 4px' }}>
+                      <svg width="10" height="10" viewBox="0 0 16 16" fill="white"><polygon points="4,2 14,8 4,14"/></svg>
+                    </span>
+                  )}
+                  {selected.has(it.url) && (
+                    <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }}>
+                      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M2 5l2.5 2.5L8 3"/></svg>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </>
       )}
