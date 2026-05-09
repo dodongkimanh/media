@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { uploadFiles, saveUrlsToMediaLibrary } from '@/lib/upload'
+import { uploadToMediaLibrary, deleteStorageFile } from '@/lib/upload'
 import { Modal } from '@/components/ui/Modal'
-import type { Product, ProductSpec, Category } from '@/lib/types'
+import type { Product, ProductSpec, Category, MediaItem } from '@/lib/types'
 
 interface ProductModalProps {
   product: Product | null
@@ -29,15 +29,10 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
   const [existingVids, setExistingVids] = useState<string[]>(product?.videos ?? [])
   const [existingFb, setExistingFb] = useState<string[]>(product?.feedback_media ?? [])
   const [existingRel, setExistingRel] = useState<string[]>(product?.related_media ?? [])
-  const [newImgs, setNewImgs] = useState<File[]>([])
-  const [newVids, setNewVids] = useState<File[]>([])
-  const [newFb, setNewFb] = useState<File[]>([])
-  const [newRel, setNewRel] = useState<File[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [saving, setSaving] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState('')
   const [saveError, setSaveError] = useState('')
-  const [libPickerField, setLibPickerField] = useState<'images' | 'feedback' | 'related' | null>(null)
+  const [libPickerField, setLibPickerField] = useState<'images' | 'videos' | 'feedback' | 'related' | null>(null)
 
   useEffect(() => {
     createClient().from('categories').select('*').order('sort_order').then(({ data }) => setCategories(data ?? []))
@@ -58,35 +53,12 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
 
     try {
       const supabase = createClient()
-
-      setUploadProgress('Đang tải ảnh...')
-      const [uploadedImgs, uploadedVids, uploadedFb, uploadedRel] = await Promise.all([
-        newImgs.length ? uploadFiles(newImgs, 'products', 'images').catch(() => []) : Promise.resolve([]),
-        newVids.length ? uploadFiles(newVids, 'products', 'videos').catch(() => []) : Promise.resolve([]),
-        newFb.length ? uploadFiles(newFb, 'products', 'feedback').catch(() => []) : Promise.resolve([]),
-        newRel.length ? uploadFiles(newRel, 'products', 'related').catch(() => []) : Promise.resolve([]),
-      ])
-
-
-      const toLibrary = [
-        ...uploadedImgs.map(url => ({ url, type: 'image' as const })),
-        ...uploadedVids.map(url => ({ url, type: 'video' as const })),
-        ...uploadedFb.map((url, i) => ({ url, type: newFb[i]?.type.startsWith('video/') ? 'video' as const : 'image' as const })),
-        ...uploadedRel.map((url, i) => ({ url, type: newRel[i]?.type.startsWith('video/') ? 'video' as const : 'image' as const })),
-      ]
-      if (toLibrary.length) saveUrlsToMediaLibrary(toLibrary)
-
-      const images = [...existingImgs, ...uploadedImgs]
-      const videos = [...existingVids, ...uploadedVids]
-      const feedback_media = [...existingFb, ...uploadedFb]
-      const related_media = [...existingRel, ...uploadedRel]
-
-      setUploadProgress('Đang lưu...')
-
       const payload = {
         name: name.trim(), sku, category_id: categoryId || null, unit,
         price_listed: priceListed, discount_pct: disc, status, description: desc,
-        images, videos, feedback_media, related_media, updated_at: new Date().toISOString()
+        images: existingImgs, videos: existingVids,
+        feedback_media: existingFb, related_media: existingRel,
+        updated_at: new Date().toISOString()
       }
 
       if (product) {
@@ -111,11 +83,9 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
       }
 
       setSaving(false)
-      setUploadProgress('')
       onSaved()
     } catch (err: unknown) {
       setSaving(false)
-      setUploadProgress('')
       const raw = err as Record<string, unknown>
       const msg = raw?.message as string
         || raw?.error_description as string
@@ -133,6 +103,7 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
 
   function onLibraryPick(urls: string[]) {
     if (libPickerField === 'images') setExistingImgs(v => [...v, ...urls.filter(u => !v.includes(u))])
+    else if (libPickerField === 'videos') setExistingVids(v => [...v, ...urls.filter(u => !v.includes(u))])
     else if (libPickerField === 'feedback') setExistingFb(v => [...v, ...urls.filter(u => !v.includes(u))])
     else if (libPickerField === 'related') setExistingRel(v => [...v, ...urls.filter(u => !v.includes(u))])
     setLibPickerField(null)
@@ -154,7 +125,7 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
             )}
             <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
             <button className="btn btn-primary" onClick={save} disabled={saving || !name.trim()}>
-              {saving ? (uploadProgress || 'Đang lưu...') : 'Lưu sản phẩm'}
+              {saving ? 'Đang lưu...' : 'Lưu sản phẩm'}
             </button>
           </>
         }
@@ -235,49 +206,31 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
           </button>
         </div>
 
-        <FileUploadField
+        <MediaField
           label="Ảnh sản phẩm"
-          accept="image/*"
           existing={existingImgs}
-          onRemoveExisting={i => setExistingImgs(v => v.filter((_, idx) => idx !== i))}
-          onAdd={files => setNewImgs(v => [...v, ...Array.from(files)])}
-          newFiles={newImgs}
-          onRemoveNew={i => setNewImgs(v => v.filter((_, idx) => idx !== i))}
-          isImage
+          onRemove={i => setExistingImgs(v => v.filter((_, idx) => idx !== i))}
           onLibrary={() => setLibPickerField('images')}
         />
 
-        <FileUploadField
+        <MediaField
           label="Video sản phẩm"
-          accept="video/*"
           existing={existingVids}
-          onRemoveExisting={i => setExistingVids(v => v.filter((_, idx) => idx !== i))}
-          onAdd={files => setNewVids(v => [...v, ...Array.from(files)])}
-          newFiles={newVids}
-          onRemoveNew={i => setNewVids(v => v.filter((_, idx) => idx !== i))}
+          onRemove={i => setExistingVids(v => v.filter((_, idx) => idx !== i))}
+          onLibrary={() => setLibPickerField('videos')}
         />
 
-        <FileUploadField
+        <MediaField
           label="Ảnh / Video Feedback khách hàng"
-          accept="image/*,video/*"
           existing={existingFb}
-          onRemoveExisting={i => setExistingFb(v => v.filter((_, idx) => idx !== i))}
-          onAdd={files => setNewFb(v => [...v, ...Array.from(files)])}
-          newFiles={newFb}
-          onRemoveNew={i => setNewFb(v => v.filter((_, idx) => idx !== i))}
-          isImage
+          onRemove={i => setExistingFb(v => v.filter((_, idx) => idx !== i))}
           onLibrary={() => setLibPickerField('feedback')}
         />
 
-        <FileUploadField
+        <MediaField
           label="Ảnh sản phẩm cùng loại tham khảo"
-          accept="image/*,video/*"
           existing={existingRel}
-          onRemoveExisting={i => setExistingRel(v => v.filter((_, idx) => idx !== i))}
-          onAdd={files => setNewRel(v => [...v, ...Array.from(files)])}
-          newFiles={newRel}
-          onRemoveNew={i => setNewRel(v => v.filter((_, idx) => idx !== i))}
-          isImage
+          onRemove={i => setExistingRel(v => v.filter((_, idx) => idx !== i))}
           onLibrary={() => setLibPickerField('related')}
         />
       </Modal>
@@ -292,53 +245,37 @@ export function ProductModal({ product, catId, onClose, onSaved }: ProductModalP
   )
 }
 
-function FileUploadField({ label, accept, existing, onRemoveExisting, onAdd, newFiles, onRemoveNew, isImage, onLibrary }: {
-  label: string; accept: string; existing: string[]
-  onRemoveExisting: (i: number) => void
-  onAdd: (f: FileList) => void
-  newFiles: File[]; onRemoveNew: (i: number) => void
-  isImage?: boolean
-  onLibrary?: () => void
+function MediaField({ label, existing, onRemove, onLibrary }: {
+  label: string
+  existing: string[]
+  onRemove: (i: number) => void
+  onLibrary: () => void
 }) {
   return (
     <div className="fg">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.35rem' }}>
         <label style={{ margin: 0 }}>{label}</label>
-        {onLibrary && (
-          <button type="button" onClick={onLibrary}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', border: '1px solid var(--green)', borderRadius: 6, padding: '.18rem .55rem', fontSize: 11.5, fontWeight: 600, color: 'var(--green)', background: 'var(--gl)', cursor: 'pointer' }}>
-            <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
-            Chọn từ Thư Viện
-          </button>
-        )}
+        <button type="button" onClick={onLibrary}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', border: '1px solid var(--green)', borderRadius: 6, padding: '.18rem .55rem', fontSize: 11.5, fontWeight: 600, color: 'var(--green)', background: 'var(--gl)', cursor: 'pointer' }}>
+          <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+          Chọn từ Thư Viện
+        </button>
       </div>
-      <div className="upload-zone">
-        <input type="file" accept={accept} multiple onChange={e => e.target.files && onAdd(e.target.files)} />
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" strokeWidth="1.5">
-          {isImage
-            ? <><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></>
-            : <polygon points="5,3 19,12 5,21"/>
-          }
-        </svg>
-        <p>Click hoặc kéo thả file</p>
-      </div>
-      {(existing.length > 0 || newFiles.length > 0) && (
+      {existing.length > 0 ? (
         <div className="preview-grid">
           {existing.map((url, i) => {
             const isVid = /\.(mp4|mov|webm)$/i.test(url)
             return (
               <div key={i} className="preview-item">
                 {isVid ? <video src={url} /> : <img src={url} alt="" />}
-                <button className="preview-remove" onClick={() => onRemoveExisting(i)}>×</button>
+                <button className="preview-remove" onClick={() => onRemove(i)}>×</button>
               </div>
             )
           })}
-          {newFiles.map((f, i) => (
-            <div key={`new-${i}`} className="preview-item">
-              <img src={URL.createObjectURL(f)} alt="" />
-              <button className="preview-remove" onClick={() => onRemoveNew(i)}>×</button>
-            </div>
-          ))}
+        </div>
+      ) : (
+        <div style={{ border: '1.5px dashed var(--bd)', borderRadius: 'var(--r)', padding: '.9rem', textAlign: 'center', color: 'var(--mu)', fontSize: 12, background: 'var(--bg)' }}>
+          Chưa có ảnh/video — nhấn &quot;Chọn từ Thư Viện&quot; để thêm
         </div>
       )}
     </div>
@@ -349,18 +286,43 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
   onConfirm: (urls: string[]) => void
   onClose: () => void
 }) {
-  const [items, setItems] = useState<{ id: string; url: string; type: string | null; caption: string | null }[]>([])
+  const [items, setItems] = useState<MediaItem[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
+  const [uploading, setUploading] = useState(false)
 
-  useEffect(() => {
-    createClient()
+  useEffect(() => { loadItems() }, [])
+
+  async function loadItems() {
+    setLoading(true)
+    const { data } = await createClient()
       .from('media_items')
-      .select('id, url, type, caption')
+      .select('id, url, type, caption, album_id, sort_order, created_at')
       .order('created_at', { ascending: false })
       .limit(300)
-      .then(({ data }) => { setItems(data ?? []); setLoading(false) })
-  }, [])
+    setItems(data ?? [])
+    setLoading(false)
+  }
+
+  async function handleUpload(files: FileList) {
+    if (!files.length) return
+    setUploading(true)
+    try {
+      await uploadToMediaLibrary(Array.from(files))
+      await loadItems()
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function deleteItem(item: MediaItem) {
+    if (!confirm('Xóa ảnh/video này khỏi thư viện? Thao tác không thể hoàn tác.')) return
+    const supabase = createClient()
+    await supabase.from('media_items').delete().eq('url', item.url)
+    await deleteStorageFile(item.url)
+    setItems(v => v.filter(i => i.url !== item.url))
+    setSelected(prev => { const s = new Set(prev); s.delete(item.url); return s })
+  }
 
   function toggle(url: string) {
     setSelected(prev => {
@@ -370,12 +332,43 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
     })
   }
 
+  const UploadZone = ({ compact }: { compact?: boolean }) => (
+    <label style={{
+      display: 'flex', flexDirection: compact ? 'row' : 'column',
+      alignItems: 'center', justifyContent: 'center',
+      gap: '.4rem',
+      borderRadius: 'var(--r)', padding: compact ? '.28rem .65rem' : '1.5rem',
+      cursor: uploading ? 'not-allowed' : 'pointer',
+      background: compact ? 'var(--gl)' : 'var(--bg)',
+      color: compact ? 'var(--green)' : 'var(--mu)',
+      fontSize: compact ? 11.5 : 13, fontWeight: compact ? 600 : 400,
+      opacity: uploading ? 0.7 : 1,
+      border: compact ? '1px solid var(--green)' : '1.5px dashed var(--bd)',
+    } as React.CSSProperties}>
+      <input type="file" accept="image/*,video/*" multiple
+        style={{ position: 'absolute', width: 0, height: 0, opacity: 0 }}
+        disabled={uploading}
+        onChange={e => e.target.files && handleUpload(e.target.files)} />
+      {!compact && (
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="17 8 12 3 7 8"/>
+          <line x1="12" y1="3" x2="12" y2="15"/>
+        </svg>
+      )}
+      {compact && (
+        <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
+      )}
+      {uploading ? 'Đang tải lên...' : compact ? 'Tải ảnh/video lên thư viện' : 'Click hoặc kéo thả ảnh/video để tải lên thư viện'}
+    </label>
+  )
+
   return (
     <Modal
       open
       onClose={onClose}
       title={`Chọn ảnh/video từ Thư Viện${selected.size ? ` (${selected.size} đã chọn)` : ''}`}
-      maxWidth={620}
+      maxWidth={660}
       scrollable
       footer={
         <>
@@ -389,34 +382,53 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
       {loading ? (
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>Đang tải thư viện...</div>
       ) : items.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>
-          Thư viện chưa có ảnh/video nào. Hãy tải lên trong mục Ảnh Video Tư Liệu trước.
+        <div>
+          <div style={{ textAlign: 'center', padding: '1rem 0 .75rem', color: 'var(--mu)', fontSize: 13 }}>
+            Thư viện chưa có ảnh/video nào. Hãy tải lên để tiếp tục.
+          </div>
+          <div style={{ position: 'relative' }}>
+            <UploadZone />
+          </div>
         </div>
       ) : (
         <>
-          <div style={{ fontSize: 12, color: 'var(--mu)', marginBottom: '.65rem' }}>
-            Click để chọn/bỏ chọn. File đã chọn có viền xanh.
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.65rem', gap: '.5rem' }}>
+            <div style={{ fontSize: 12, color: 'var(--mu)' }}>
+              Click để chọn/bỏ chọn. Đã chọn <strong>{selected.size}</strong> / {items.length} file.
+            </div>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <UploadZone compact />
+            </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(88px,1fr))', gap: '.45rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(90px,1fr))', gap: '.45rem' }}>
             {items.map(it => {
               const isVid = it.type === 'video' || /\.(mp4|mov|webm|avi)$/i.test(it.url)
+              const isSel = selected.has(it.url)
               return (
-                <div key={it.id} onClick={() => toggle(it.url)}
-                  style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', cursor: 'pointer', border: selected.has(it.url) ? '2.5px solid var(--green)' : '2.5px solid transparent', background: 'var(--bg)', transition: 'border-color .12s' }}>
-                  {isVid
-                    ? <video src={it.url} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                    : <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
-                  }
+                <div key={it.id}
+                  style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', background: 'var(--bg)', border: isSel ? '2.5px solid var(--green)' : '2.5px solid transparent', transition: 'border-color .12s' }}>
+                  <div onClick={() => toggle(it.url)} style={{ width: '100%', height: '100%', cursor: 'pointer' }}>
+                    {isVid
+                      ? <video src={it.url} preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      : <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
+                    }
+                  </div>
                   {isVid && (
-                    <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,.62)', borderRadius: 4, display: 'flex', alignItems: 'center', padding: '2px 4px' }}>
+                    <span style={{ position: 'absolute', bottom: 3, left: 3, background: 'rgba(0,0,0,.62)', borderRadius: 4, display: 'flex', alignItems: 'center', padding: '2px 4px', pointerEvents: 'none' }}>
                       <svg width="10" height="10" viewBox="0 0 16 16" fill="white"><polygon points="4,2 14,8 4,14"/></svg>
                     </span>
                   )}
-                  {selected.has(it.url) && (
-                    <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }}>
+                  {isSel && (
+                    <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.3)', pointerEvents: 'none' }}>
                       <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M2 5l2.5 2.5L8 3"/></svg>
                     </div>
                   )}
+                  <button
+                    onClick={e => { e.stopPropagation(); deleteItem(it) }}
+                    title="Xóa khỏi thư viện"
+                    style={{ position: 'absolute', bottom: 3, right: 3, width: 20, height: 20, background: 'rgba(200,30,30,.85)', border: 'none', borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    <svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#fff" strokeWidth="2"><path d="M2 3h8M5 3V2h2v1M4 3l.6 7h2.8L8 3"/></svg>
+                  </button>
                 </div>
               )
             })}

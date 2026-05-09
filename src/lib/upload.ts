@@ -61,3 +61,16 @@ export async function saveUrlsToMediaLibrary(items: { url: string; type: 'image'
     // Không block luồng chính nếu lưu thư viện thất bại
   }
 }
+
+export async function uploadToMediaLibrary(files: File[]): Promise<void> {
+  if (!files.length) return
+  const supabase = createClient()
+  const albumId = await getOrCreateAutoAlbum()
+  for (const file of files) {
+    const isVid = file.type.startsWith('video/')
+    const url = await uploadFile(file, 'media', albumId)
+    await supabase.from('media_items').insert({
+      album_id: albumId, url, type: isVid ? 'video' : 'image', sort_order: 0
+    })
+  }
+}
