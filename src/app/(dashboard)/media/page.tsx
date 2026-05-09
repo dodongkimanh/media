@@ -199,7 +199,7 @@ export default function MediaPage() {
                   onClick={() => setLightbox({ items: lbItems, idx })}
                 >
                   {item.type === 'video'
-                    ? <video src={item.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ? <video src={`${item.url}#t=0.001`} preload="metadata" muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     : <img src={item.url} alt={item.caption} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
                   }
                   {item.type === 'video' && <span className="mi-vid-badge">VIDEO</span>}
@@ -341,7 +341,7 @@ export default function MediaPage() {
               <div style={{ width: '100%', aspectRatio: '16/9', background: 'var(--bg)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {cover
                   ? coverIsVideo
-                    ? <video src={cover} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted preload="metadata" />
+                    ? <video src={`${cover}#t=0.001`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} muted playsInline preload="metadata" />
                     : <img src={cover} alt={album.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   : (
                     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" strokeWidth="1" style={{ opacity: .35 }}>
@@ -515,7 +515,7 @@ function AddMediaModal({ album, existingItems, onClose, onSaved }: {
                     <div key={it.id} onClick={() => toggleLib(it.id)}
                       style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', border: libSelected.has(it.id) ? '2.5px solid var(--green)' : '2.5px solid transparent', cursor: 'pointer', background: 'var(--sf)' }}>
                       {it.type === 'video'
-                        ? <video src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <video src={`${it.url}#t=0.001`} preload="metadata" muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={it.caption} />
                       }
                       {it.type === 'video' && (
@@ -778,7 +778,7 @@ function AlbumModal({ album, profileId, onClose, onSaved }: {
                   {libItems.map(it => (
                     <div key={it.id} onClick={() => toggleLib(it.id)} style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', border: libSelected.has(it.id) ? '2.5px solid var(--green)' : '2.5px solid transparent', cursor: 'pointer', background: 'var(--sf)' }}>
                       {it.type === 'video'
-                        ? <video src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ? <video src={`${it.url}#t=0.001`} preload="metadata" muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         : <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt={it.caption} />
                       }
                       {it.type === 'video' && (
