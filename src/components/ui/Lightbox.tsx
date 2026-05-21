@@ -19,6 +19,7 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
   const [idx, setIdx] = useState(initialIndex)
   const [downloading, setDownloading] = useState(false)
   const [shareStatus, setShareStatus] = useState<ShareStatus>('idle')
+  const [linkCopied, setLinkCopied] = useState(false)
 
   useEffect(() => { setIdx(initialIndex) }, [initialIndex])
 
@@ -32,7 +33,18 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
     return () => window.removeEventListener('keydown', handler)
   }, [items.length, onClose])
 
-  useEffect(() => { setShareStatus('idle') }, [idx])
+  useEffect(() => { setShareStatus('idle'); setLinkCopied(false) }, [idx])
+
+  async function handleCopyLink() {
+    if (!cur?.url) return
+    try {
+      await navigator.clipboard.writeText(cur.url)
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    } catch {
+      window.prompt('Sao chép link:', cur.url)
+    }
+  }
 
   const cur = items[idx]
   const isVideo = cur?.type === 'video' || /\.(mp4|mov|webm|avi)$/i.test(cur?.url ?? '')
@@ -222,6 +234,24 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
               <circle cx="15" cy="16" r="2.2"/>
               <circle cx="5" cy="10" r="2.2"/>
               <path d="M7.1 8.9l5.8-3.3M7.1 11.1l5.8 3.3" strokeLinecap="round"/>
+            </svg>
+          )}
+        </button>
+
+        {/* Copy link */}
+        <button
+          onClick={handleCopyLink}
+          style={btnStyle}
+          title="Sao chép link"
+        >
+          {linkCopied ? (
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="#4ade80" strokeWidth="1.8">
+              <path d="M4 10l5 5 7-8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M8 11.5a3.5 3.5 0 0 0 5 0l2.5-2.5a3.5 3.5 0 0 0-5-5L9 5.5" strokeLinecap="round"/>
+              <path d="M12 8.5a3.5 3.5 0 0 0-5 0L4.5 11A3.5 3.5 0 0 0 9.5 16L11 14.5" strokeLinecap="round"/>
             </svg>
           )}
         </button>
