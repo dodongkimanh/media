@@ -13,7 +13,7 @@ import type { MediaAlbum, MediaItem, MediaCategory } from '@/lib/types'
 import { mediaCatLabel, mediaCatClass, fmtDate } from '@/lib/types'
 
 export default function MediaPage() {
-  const { profile, isAdmin } = useAuth()
+  const { profile, isAdmin, canManage } = useAuth()
   const [albums, setAlbums] = useState<MediaAlbum[]>([])
   const [filter, setFilter] = useState<MediaCategory | ''>('')
   const [viewAlbum, setViewAlbum] = useState<MediaAlbum | null>(null)
@@ -175,7 +175,7 @@ export default function MediaPage() {
               {viewAlbum.description && <div style={{ fontSize: 13, color: 'var(--mu)' }}>{viewAlbum.description}</div>}
               <div style={{ fontSize: 12, color: 'var(--mu)', marginTop: '.3rem' }}>{albumItems.length} file · {fmtDate(viewAlbum.created_at)}</div>
             </div>
-            {isAdmin && (
+            {canManage && (
               <button
                 onClick={() => setShowAddModal(true)}
                 disabled={uploading}

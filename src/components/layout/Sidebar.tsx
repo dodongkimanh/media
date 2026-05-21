@@ -33,7 +33,7 @@ const navItems = [
 
 export function Sidebar({ open, onClose }: SidebarProps) {
   const pathname = usePathname()
-  const { isAdmin } = useAuth()
+  const { isAdmin, canManage } = useAuth()
   const [categories, setCategories] = useState<Category[]>([])
   const [isMobile, setIsMobile] = useState(false)
 
@@ -150,7 +150,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
           })}
 
           <div style={{ marginTop: '.5rem', display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
-            {isAdmin && (
+            {canManage && (
               <Link href="/products/new" onClick={onClose}
                 className="btn btn-primary btn-sm btn-full"
                 style={{ justifyContent: 'center', textDecoration: 'none' }}

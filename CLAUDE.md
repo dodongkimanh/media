@@ -49,7 +49,7 @@ Auth is handled via Supabase SSR. Middleware is in `src/proxy.ts` (not `middlewa
 - `src/lib/supabase/client.ts` — browser client (singleton)
 - `src/lib/supabase/server.ts` — server client (uses cookies)
 
-Role-based access: users have `admin` or `staff` role stored in the `profiles` table. Use the `useAuth` hook (`src/hooks/useAuth.ts`) on the client side.
+Role-based access: users have `admin`, `lead`, or `staff` role stored in the `profiles` table. The `useAuth` hook (`src/hooks/useAuth.ts`) exposes `isAdmin`, `isLead`, and `canManage` (true for admin or lead).
 
 ### Database (Supabase/PostgreSQL)
 

@@ -13,7 +13,7 @@ import { ProductModal } from '@/components/products/ProductModal'
 export default function ProductsPage() {
   const params = useParams()
   const router = useRouter()
-  const { isAdmin } = useAuth()
+  const { isAdmin, canManage } = useAuth()
   const catId = params.id as string
 
   const [products, setProducts] = useState<Product[]>([])
@@ -53,6 +53,7 @@ export default function ProductsPage() {
       product={viewProduct}
       catName={catName}
       isAdmin={isAdmin}
+      canManage={canManage}
       onBack={() => setViewProduct(null)}
       onEdit={p => { setEditProduct(p); setShowModal(true); setViewProduct(null) }}
       onRefresh={() => { load(); setViewProduct(null) }}
@@ -71,7 +72,7 @@ export default function ProductsPage() {
           </div>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{catName}</div>
         </div>
-        {isAdmin && (
+        {canManage && (
           <button className="btn btn-primary btn-sm" onClick={() => { setEditProduct(null); setShowModal(true) }}>
             <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 2v10M2 7h10"/></svg>
             Thêm sản phẩm
@@ -157,8 +158,8 @@ export default function ProductsPage() {
   )
 }
 
-function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }: {
-  product: Product; catName: string; isAdmin: boolean
+function ProductDetail({ product, catName, isAdmin, canManage, onBack, onEdit, onRefresh }: {
+  product: Product; catName: string; isAdmin: boolean; canManage: boolean
   onBack: () => void; onEdit: (p: Product) => void; onRefresh: () => void
 }) {
   const [mainIdx, setMainIdx] = useState(0)
@@ -320,7 +321,7 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
         </div>
         <div style={{ display: 'flex', gap: '.45rem' }}>
           <button className="btn btn-ghost btn-sm" onClick={onBack}>← Quay lại</button>
-          {isAdmin && <button className="btn btn-secondary btn-sm" onClick={() => onEdit(product)}>Chỉnh sửa</button>}
+          {canManage && <button className="btn btn-secondary btn-sm" onClick={() => onEdit(product)}>Chỉnh sửa</button>}
         </div>
       </div>
 
@@ -403,10 +404,10 @@ function ProductDetail({ product, catName, isAdmin, onBack, onEdit, onRefresh }:
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 12, color: 'var(--mu)' }}>Mã: <b>{product.sku || '—'}</b>&nbsp;·&nbsp;ĐVT: <b>{product.unit || 'Cái'}</b></div>
             <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--tx)', margin: '.25rem 0', lineHeight: 1.25 }}>{product.name}</div>
-            {isAdmin && (
+            {canManage && (
               <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginTop: '.3rem' }}>
                 <button className="btn btn-secondary btn-sm" onClick={() => onEdit(product)}>Chỉnh sửa</button>
-                <button className="btn btn-danger btn-sm" onClick={deleteProduct}>Xóa</button>
+                {isAdmin && <button className="btn btn-danger btn-sm" onClick={deleteProduct}>Xóa</button>}
               </div>
             )}
           </div>
