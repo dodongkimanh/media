@@ -23,6 +23,14 @@ export function useAuth() {
         .select('*')
         .eq('id', user.id)
         .single()
+      if (data?.is_locked) {
+        await supabase.auth.signOut()
+        setProfile(null)
+        setLoading(false)
+        alert('Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.')
+        window.location.href = '/login'
+        return
+      }
       setProfile(data)
       setLoading(false)
     }

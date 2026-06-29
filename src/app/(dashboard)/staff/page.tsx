@@ -111,6 +111,17 @@ export default function StaffPage() {
     load()
   }
 
+  async function toggleLock(s: Profile) {
+    const lock = !s.is_locked
+    const action = lock ? 'Khóa' : 'Mở khóa'
+    if (!confirm(`${action} tài khoản "${s.full_name}"?`)) return
+    const supabase = createClient()
+    const { error: err } = await supabase.from('profiles').update({ is_locked: lock }).eq('id', s.id)
+    if (err) { show('Lỗi: ' + err.message, 'error'); return }
+    show(`Đã ${action.toLowerCase()} tài khoản!`)
+    load()
+  }
+
   async function remove(s: Profile) {
     if (s.id === me?.id) { show('Không thể xóa tài khoản đang đăng nhập', 'error'); return }
     if (!confirm(`Xóa nhân viên "${s.full_name}"?`)) return
@@ -144,11 +155,11 @@ export default function StaffPage() {
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Ngày tạo</th><th></th></tr>
+            <tr><th>Họ tên</th><th>Email</th><th>Vai trò</th><th>Trạng thái</th><th>Ngày tạo</th><th></th></tr>
           </thead>
           <tbody>
             {staff.map(s => (
-              <tr key={s.id}>
+              <tr key={s.id} style={{ opacity: s.is_locked ? .55 : 1 }}>
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem' }}>
                     <Avatar name={s.full_name} color={s.avatar_color} size="sm" />
@@ -160,12 +171,30 @@ export default function StaffPage() {
                 <td>
                   <span className={`badge ${roleBadge(s.role)}`}>{roleLabel(s.role)}</span>
                 </td>
+                <td>
+                  {s.is_locked
+                    ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', color: 'var(--red)', fontSize: 12, fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 1 1 6 0v2"/></svg>
+                        Đã khóa
+                      </span>
+                    : <span style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', color: 'var(--green)', fontSize: 12, fontWeight: 600 }}>
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="8" cy="8" r="3"/><path d="M8 5V2M8 14v-3M5 8H2M14 8h-3"/></svg>
+                        Hoạt động
+                      </span>}
+                </td>
                 <td style={{ color: 'var(--mu)' }}>{fmtDate(s.created_at)}</td>
                 <td>
                   <div style={{ display: 'flex', gap: '.35rem' }}>
                     {canEditTarget(s) && (
                       <button className="btn-icon" onClick={() => openEdit(s)} title="Sửa">
                         <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M11 2l3 3-9 9H2v-3L11 2z"/></svg>
+                      </button>
+                    )}
+                    {isAdmin && s.id !== me?.id && (
+                      <button className="btn-icon" onClick={() => toggleLock(s)} title={s.is_locked ? 'Mở khóa' : 'Khóa tài khoản'}>
+                        {s.is_locked
+                          ? <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#059669" strokeWidth="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 0 1 5.5-1.5"/></svg>
+                          : <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="#BA7517" strokeWidth="1.5"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5 7V5a3 3 0 1 1 6 0v2"/></svg>}
                       </button>
                     )}
                     {canDeleteTarget(s) && (

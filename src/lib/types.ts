@@ -10,6 +10,7 @@ export interface Profile {
   full_name: string
   role: Role
   avatar_color: string
+  is_locked?: boolean
   created_at: string
 }
 
