@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 
 interface LightboxMedia {
   url: string
   type?: 'image' | 'video'
+  info?: ReactNode
 }
 
 interface LightboxProps {
@@ -149,6 +150,28 @@ export function Lightbox({ items, initialIndex = 0, onClose }: LightboxProps) {
       }}>
         {idx + 1} / {items.length}
       </div>
+
+      {/* Source info (album/category/product) */}
+      {cur?.info && (
+        <div style={{
+          position: 'absolute',
+          top: 'max(.75rem, env(safe-area-inset-top))',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          maxWidth: 'min(90vw, 480px)',
+          background: 'rgba(0,0,0,.55)',
+          backdropFilter: 'blur(8px)',
+          borderRadius: 10,
+          padding: '.4rem .7rem',
+          fontSize: 12.5,
+          color: 'rgba(255,255,255,.9)',
+          zIndex: 2,
+          textAlign: 'center',
+          lineHeight: 1.5,
+        }}>
+          {cur.info}
+        </div>
+      )}
 
       {/* Image / video area */}
       <div className="lb-wrap">

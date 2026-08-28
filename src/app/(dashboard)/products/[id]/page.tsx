@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
@@ -13,8 +13,10 @@ import { ProductModal } from '@/components/products/ProductModal'
 export default function ProductsPage() {
   const params = useParams()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { isAdmin, canManage } = useAuth()
   const catId = params.id as string
+  const pid = searchParams.get('pid')
 
   const [products, setProducts] = useState<Product[]>([])
   const [catName, setCatName] = useState('')
@@ -35,6 +37,10 @@ export default function ProductsPage() {
     setCatName(catRes.data?.name ?? '')
     setProducts(prodRes.data ?? [])
     setLoading(false)
+    if (pid) {
+      const match = (prodRes.data ?? []).find(p => p.id === pid)
+      if (match) { setViewProduct(match); setSelectedProduct(match) }
+    }
   }
 
   useEffect(() => { load() }, [catId])

@@ -134,6 +134,7 @@ export interface MediaItem {
   caption: string
   sort_order: number
   created_at: string
+  media_albums?: { title: string; category: MediaCategory }
 }
 
 export const AVATAR_COLORS = [
