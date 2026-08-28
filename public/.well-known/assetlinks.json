@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.kimanh.twa",
+      "sha256_cert_fingerprints": [
+        "AB:10:3B:E1:9F:0B:B4:9D:37:CC:B0:EC:F2:8A:B8:5A:94:CB:DB:3B:E4:8C:47:62:1B:19:49:1C:5D:C5:7E:DC"
+      ]
+    }
+  }
+]

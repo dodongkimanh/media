@@ -29,6 +29,10 @@ const navItems = [
     id: 'media', label: 'Ảnh Video Tư Liệu', href: '/media',
     icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><path d="M1 10l3.5-3.5 3 3 2-2 4 4"/><circle cx="11.5" cy="6.5" r="1.2" fill="currentColor" stroke="none"/></svg>
   },
+  {
+    id: 'library', label: 'Thư Viện', href: '/library',
+    icon: <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="2" width="10" height="10" rx="1.2"/><rect x="4" y="5" width="10" height="9" rx="1.2" fill="var(--sf)"/><path d="M4 11l2.5-2.5 2 2 1.5-1.5 3 3" strokeWidth="1.3"/></svg>
+  },
 ]
 
 export function Sidebar({ open, onClose }: SidebarProps) {

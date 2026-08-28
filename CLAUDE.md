@@ -82,6 +82,23 @@ Tailwind CSS 4 via `@tailwindcss/postcss`. Custom design tokens and reusable com
 
 `next.config.ts` is configured to allow images from `*.supabase.co` via `remotePatterns`.
 
+### Media Upload & Storage
+
+- `src/lib/upload.ts` — uploads files to Supabase Storage buckets (`products`, `media`, `articles`) with randomized filenames; uploads from the product/quiz UIs are also mirrored into a shared "Ảnh & Video Sản Phẩm" media album via `saveUrlsToMediaLibrary`/`uploadToMediaLibrary`.
+- `src/lib/videoConvert.ts` — transcodes uploaded videos to H.264 MP4 client-side using `@ffmpeg/ffmpeg` (WASM, loaded from unpkg CDN) before upload, so playback is consistent across browsers.
+- `scripts/patch-ffmpeg.js` runs as a `postinstall` step to patch `@ffmpeg/ffmpeg`'s worker.js with a `webpackIgnore` comment — without it, Turbopack/Webpack breaks the WASM core's dynamic import. Re-run `npm install` if this patch is ever lost (e.g. after a clean install).
+
+### Privileged Server Operations
+
+`src/lib/supabase/admin.ts` creates a service-role Supabase client that bypasses RLS. It's only used inside API routes (e.g. `src/app/api/staff/route.ts`), never client-side. These routes manually re-check the caller's role from `profiles` before performing privileged actions (creating/deleting auth users), since the service-role key has no RLS protection of its own. Requires `SUPABASE_SERVICE_ROLE_KEY` in `.env.local` (not exposed via `NEXT_PUBLIC_`).
+
+### PWA (installable on phones)
+
+- `public/manifest.json` — app metadata + icons, linked from `src/app/layout.tsx` metadata (`manifest`, `icons`, `appleWebApp`).
+- `public/icons/` — generated via `node scripts/generate-icons.js` (uses `sharp`, already a dependency). Re-run it if the brand monogram/colors change.
+- `public/sw.js` — minimal service worker registered by `src/components/PwaRegister.tsx`. It only caches the static app shell (`offline.html`, icons) for an offline fallback on navigation — it deliberately does not cache Supabase API/auth/realtime requests, since this app's data is dynamic.
+- To bump the shell cache after editing `sw.js` or the shell asset list, change the `CACHE` version string in `public/sw.js`.
+
 ### Deployment
 
 GitHub Actions (`.github/workflows/deploy.yml`) builds on push to `main` and deploys to Vercel. Supabase credentials are injected as Vercel environment secrets.
