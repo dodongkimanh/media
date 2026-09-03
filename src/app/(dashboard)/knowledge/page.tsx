@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/useAuth'
 import { Modal } from '@/components/ui/Modal'
+import { Lightbox } from '@/components/ui/Lightbox'
 import { Toast } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
 import { uploadFile, saveUrlsToMediaLibrary } from '@/lib/upload'
@@ -106,6 +107,7 @@ export default function KnowledgePage() {
   const [libPickerIndex, setLibPickerIndex] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [viewArt, setViewArt] = useState<Article | null>(null)
+  const [lightbox, setLightbox] = useState<{ items: { url: string; type?: 'image' | 'video'; info?: string }[]; idx: number } | null>(null)
   const { toast, show, clear } = useToast()
 
   async function load() {
@@ -215,6 +217,8 @@ export default function KnowledgePage() {
   ]
 
   if (viewArt) {
+    const viewBlocks = articleBlocks(viewArt)
+    const mediaBlocks = viewBlocks.filter(b => b.type !== 'text' && !!b.url)
     return (
       <div>
         <div style={{ padding: '.95rem 1.2rem .7rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '.75rem', flexWrap: 'wrap', borderBottom: '1px solid var(--bd)', background: 'var(--sf)', position: 'sticky', top: 0, zIndex: 5 }}>
@@ -240,20 +244,29 @@ export default function KnowledgePage() {
             </span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {articleBlocks(viewArt).map((b, i) => {
+            {viewBlocks.map((b, i) => {
               if (b.type === 'text') {
                 return b.text ? (
                   <div key={i} style={{ fontSize: 18, lineHeight: 1.85, whiteSpace: 'pre-wrap', color: 'var(--tx)' }}>{b.text}</div>
                 ) : null
               }
               if (!b.url) return null
+              const mIdx = mediaBlocks.indexOf(b)
               return (
                 <figure key={i} style={{ margin: 0, width: '85%', marginLeft: 'auto', marginRight: 'auto' }}>
-                  {b.type === 'video' ? (
-                    <video src={b.url} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block', background: '#000' }} />
-                  ) : (
-                    <img src={b.url} alt={b.caption ?? ''} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block' }} />
-                  )}
+                  <div
+                    onClick={() => setLightbox({
+                      items: mediaBlocks.map(m => ({ url: m.url!, type: m.type as 'image' | 'video', info: m.caption || undefined })),
+                      idx: mIdx,
+                    })}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {b.type === 'video' ? (
+                      <video src={b.url} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block', background: '#000', pointerEvents: 'none' }} />
+                    ) : (
+                      <img src={b.url} alt={b.caption ?? ''} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block' }} />
+                    )}
+                  </div>
                   {b.caption && (
                     <figcaption style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--mu)', marginTop: '.4rem' }}>{b.caption}</figcaption>
                   )}
@@ -262,6 +275,7 @@ export default function KnowledgePage() {
             })}
           </div>
         </div>
+        {lightbox && <Lightbox items={lightbox.items} initialIndex={lightbox.idx} onClose={() => setLightbox(null)} />}
         {toast && <Toast message={toast.msg} type={toast.type} onClose={clear} />}
       </div>
     )
