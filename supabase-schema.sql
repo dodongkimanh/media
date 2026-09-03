@@ -167,6 +167,7 @@ create table if not exists public.articles (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+alter table public.articles add column if not exists blocks jsonb default '[]';
 alter table public.articles enable row level security;
 
 drop policy if exists "Authenticated can read articles" on public.articles;

@@ -7,48 +7,49 @@ import { useAuth } from '@/hooks/useAuth'
 import { Modal } from '@/components/ui/Modal'
 import { Toast } from '@/components/ui/Toast'
 import { useToast } from '@/hooks/useToast'
-import { uploadFiles, saveUrlsToMediaLibrary } from '@/lib/upload'
-import type { Article, ArticleType } from '@/lib/types'
+import { uploadFile, saveUrlsToMediaLibrary } from '@/lib/upload'
+import type { Article, ArticleBlock, ArticleType } from '@/lib/types'
 import { articleTypeLabel, articleTypeClass, fmtDate } from '@/lib/types'
 
+function articleBlocks(a: Article): ArticleBlock[] {
+  if (a.blocks && a.blocks.length > 0) return a.blocks
+  const blocks: ArticleBlock[] = []
+  if (a.content) blocks.push({ type: 'text', text: a.content })
+  for (const url of a.images ?? []) blocks.push({ type: 'image', url, caption: '' })
+  return blocks
+}
+
 function MediaLibraryPicker({ onConfirm, onClose }: {
-  onConfirm: (urls: string[]) => void
+  onConfirm: (item: { url: string; type: 'image' | 'video' }) => void
   onClose: () => void
 }) {
-  const [items, setItems] = useState<{ id: string; url: string; caption: string | null }[]>([])
-  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [items, setItems] = useState<{ id: string; url: string; type: 'image' | 'video'; caption: string | null }[]>([])
+  const [selected, setSelected] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     createClient()
       .from('media_items')
-      .select('id, url, caption')
-      .eq('type', 'image')
+      .select('id, url, type, caption')
       .order('created_at', { ascending: false })
       .limit(300)
       .then(({ data }) => { setItems(data ?? []); setLoading(false) })
   }, [])
 
-  function toggle(url: string) {
-    setSelected(prev => {
-      const s = new Set(prev)
-      if (s.has(url)) s.delete(url); else s.add(url)
-      return s
-    })
-  }
+  const selectedItem = items.find(it => it.url === selected)
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={`Chọn ảnh từ Thư Viện${selected.size ? ` (${selected.size} đã chọn)` : ''}`}
+      title="Chọn ảnh / video từ Thư Viện"
       maxWidth={620}
       scrollable
       footer={
         <>
           <button className="btn btn-ghost" onClick={onClose}>Hủy</button>
-          <button className="btn btn-primary" onClick={() => onConfirm(Array.from(selected))} disabled={selected.size === 0}>
-            Thêm {selected.size || ''} ảnh vào bài viết
+          <button className="btn btn-primary" onClick={() => selectedItem && onConfirm({ url: selectedItem.url, type: selectedItem.type })} disabled={!selectedItem}>
+            Chèn vào bài viết
           </button>
         </>
       }
@@ -57,19 +58,26 @@ function MediaLibraryPicker({ onConfirm, onClose }: {
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>Đang tải thư viện...</div>
       ) : items.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--mu)', fontSize: 13 }}>
-          Thư viện chưa có ảnh nào. Hãy tải ảnh lên trong mục Ảnh Video Tư Liệu trước.
+          Thư viện chưa có ảnh/video nào. Hãy tải lên trong mục Ảnh Video Tư Liệu trước.
         </div>
       ) : (
         <>
           <div style={{ fontSize: 12, color: 'var(--mu)', marginBottom: '.65rem' }}>
-            Click để chọn/bỏ chọn ảnh. Ảnh đã chọn có viền xanh.
+            Click để chọn ảnh hoặc video. Mục đã chọn có viền xanh.
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(88px,1fr))', gap: '.45rem' }}>
             {items.map(it => (
-              <div key={it.id} onClick={() => toggle(it.url)}
-                style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', cursor: 'pointer', border: selected.has(it.url) ? '2.5px solid var(--green)' : '2.5px solid transparent', background: 'var(--bg)', transition: 'border-color .12s' }}>
-                <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
-                {selected.has(it.url) && (
+              <div key={it.id} onClick={() => setSelected(it.url)}
+                style={{ position: 'relative', aspectRatio: '1', borderRadius: 'var(--r)', overflow: 'hidden', cursor: 'pointer', border: selected === it.url ? '2.5px solid var(--green)' : '2.5px solid transparent', background: 'var(--bg)', transition: 'border-color .12s' }}>
+                {it.type === 'video' ? (
+                  <video src={it.url} muted style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                ) : (
+                  <img src={it.url} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} alt={it.caption ?? ''} />
+                )}
+                {it.type === 'video' && (
+                  <div style={{ position: 'absolute', bottom: 4, left: 4, background: 'rgba(0,0,0,.65)', color: '#fff', fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 4 }}>VIDEO</div>
+                )}
+                {selected === it.url && (
                   <div style={{ position: 'absolute', top: 4, right: 4, width: 20, height: 20, background: 'var(--green)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 1px 3px rgba(0,0,0,.3)' }}>
                     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2.5"><path d="M2 5l2.5 2.5L8 3"/></svg>
                   </div>
@@ -92,12 +100,12 @@ export default function KnowledgePage() {
   const [editArt, setEditArt] = useState<Article | null>(null)
   const [type, setType] = useState<ArticleType>('policy')
   const [title, setTitle] = useState('')
-  const [content, setContent] = useState('')
-  const [existingImgs, setExistingImgs] = useState<string[]>([])
-  const [newImgs, setNewImgs] = useState<File[]>([])
+  const [blocks, setBlocks] = useState<ArticleBlock[]>([])
+  const [uploadingIdx, setUploadingIdx] = useState<number | null>(null)
+  const [uploadStatus, setUploadStatus] = useState('')
+  const [libPickerIndex, setLibPickerIndex] = useState<number | null>(null)
   const [saving, setSaving] = useState(false)
   const [viewArt, setViewArt] = useState<Article | null>(null)
-  const [showLibPicker, setShowLibPicker] = useState(false)
   const { toast, show, clear } = useToast()
 
   async function load() {
@@ -110,8 +118,44 @@ export default function KnowledgePage() {
 
   useEffect(() => { load() }, [filter])
 
-  function openAdd() { setEditArt(null); setType('policy'); setTitle(''); setContent(''); setExistingImgs([]); setNewImgs([]); setShowModal(true) }
-  function openEdit(a: Article) { setEditArt(a); setType(a.type); setTitle(a.title); setContent(a.content); setExistingImgs(a.images); setNewImgs([]); setShowModal(true) }
+  function openAdd() { setEditArt(null); setType('policy'); setTitle(''); setBlocks([{ type: 'text', text: '' }]); setShowModal(true) }
+  function openEdit(a: Article) { setEditArt(a); setType(a.type); setTitle(a.title); setBlocks(articleBlocks(a)); setShowModal(true) }
+
+  function addTextBlock() { setBlocks(v => [...v, { type: 'text', text: '' }]) }
+  function addMediaBlock() { setBlocks(v => [...v, { type: 'image', url: '', caption: '' }]) }
+  function updateBlock(i: number, patch: Partial<ArticleBlock>) { setBlocks(v => v.map((b, idx) => idx === i ? { ...b, ...patch } : b)) }
+  function removeBlock(i: number) { setBlocks(v => v.filter((_, idx) => idx !== i)) }
+  function moveBlock(i: number, dir: -1 | 1) {
+    setBlocks(v => {
+      const j = i + dir
+      if (j < 0 || j >= v.length) return v
+      const copy = [...v]
+      ;[copy[i], copy[j]] = [copy[j], copy[i]]
+      return copy
+    })
+  }
+
+  async function handleBlockFile(i: number, file: File) {
+    setUploadingIdx(i)
+    setUploadStatus('Đang tải lên...')
+    try {
+      let f = file
+      const isVid = file.type.startsWith('video/')
+      if (isVid) {
+        const { convertVideoToH264 } = await import('@/lib/videoConvert')
+        f = await convertVideoToH264(file, pct => setUploadStatus(`Đang chuyển đổi video... ${pct}%`))
+        setUploadStatus('Đang tải lên...')
+      }
+      const url = await uploadFile(f, 'articles')
+      saveUrlsToMediaLibrary([{ url, type: isVid ? 'video' : 'image' }])
+      updateBlock(i, { type: isVid ? 'video' : 'image', url })
+    } catch {
+      show('Lỗi khi tải lên tệp', 'error')
+    } finally {
+      setUploadingIdx(null)
+      setUploadStatus('')
+    }
+  }
 
   const [saveError, setSaveError] = useState('')
 
@@ -120,15 +164,15 @@ export default function KnowledgePage() {
     setSaving(true)
     setSaveError('')
     try {
-      const uploadedImgs = newImgs.length ? await uploadFiles(newImgs, 'articles').catch(() => []) : []
-      saveUrlsToMediaLibrary(uploadedImgs.map(url => ({ url, type: 'image' as const })))
-      const images = [...existingImgs, ...uploadedImgs]
+      const cleanBlocks = blocks.filter(b => b.type === 'text' ? !!b.text?.trim() : !!b.url)
+      const content = cleanBlocks.filter(b => b.type === 'text').map(b => b.text).join('\n\n')
+      const images = cleanBlocks.filter(b => b.type === 'image').map(b => b.url!)
       const supabase = createClient()
       if (editArt) {
-        const { error } = await supabase.from('articles').update({ type, title, content, images, updated_at: new Date().toISOString() }).eq('id', editArt.id)
+        const { error } = await supabase.from('articles').update({ type, title, content, images, blocks: cleanBlocks, updated_at: new Date().toISOString() }).eq('id', editArt.id)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('articles').insert({ type, title, content, images, created_by: profile?.id })
+        const { error } = await supabase.from('articles').insert({ type, title, content, images, blocks: cleanBlocks, created_by: profile?.id })
         if (error) throw error
       }
       setSaving(false)
@@ -195,14 +239,28 @@ export default function KnowledgePage() {
               {fmtDate(viewArt.created_at)} · {viewArt.profiles?.full_name}
             </span>
           </div>
-          <div style={{ fontSize: 18, lineHeight: 1.85, whiteSpace: 'pre-wrap', color: 'var(--tx)' }}>{viewArt.content}</div>
-          {viewArt.images.length > 0 && (
-            <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-              {viewArt.images.map((url, i) => (
-                <img key={i} src={url} alt="" style={{ width: '85%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block', margin: '0 auto' }} />
-              ))}
-            </div>
-          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {articleBlocks(viewArt).map((b, i) => {
+              if (b.type === 'text') {
+                return b.text ? (
+                  <div key={i} style={{ fontSize: 18, lineHeight: 1.85, whiteSpace: 'pre-wrap', color: 'var(--tx)' }}>{b.text}</div>
+                ) : null
+              }
+              if (!b.url) return null
+              return (
+                <figure key={i} style={{ margin: 0, width: '85%', marginLeft: 'auto', marginRight: 'auto' }}>
+                  {b.type === 'video' ? (
+                    <video src={b.url} controls style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block', background: '#000' }} />
+                  ) : (
+                    <img src={b.url} alt={b.caption ?? ''} style={{ width: '100%', borderRadius: 10, border: '1px solid var(--bd)', display: 'block' }} />
+                  )}
+                  {b.caption && (
+                    <figcaption style={{ textAlign: 'center', fontSize: 12.5, color: 'var(--mu)', marginTop: '.4rem' }}>{b.caption}</figcaption>
+                  )}
+                </figure>
+              )
+            })}
+          </div>
         </div>
         {toast && <Toast message={toast.msg} type={toast.type} onClose={clear} />}
       </div>
@@ -278,7 +336,7 @@ export default function KnowledgePage() {
         onClose={() => setShowModal(false)}
         title={editArt ? 'Sửa bài viết' : 'Thêm bài viết'}
         confirmClose={!saving}
-        maxWidth={480}
+        maxWidth={600}
         footer={
           <>
             {saveError && <div style={{ flex: 1, fontSize: 12, color: 'var(--red)', background: '#FEF0F0', border: '1px solid #F7C1C1', borderRadius: 8, padding: '.4rem .75rem', marginRight: '.5rem' }}>{saveError}</div>}
@@ -302,44 +360,67 @@ export default function KnowledgePage() {
           <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Tiêu đề bài viết" />
         </div>
         <div className="fg">
-          <label>Nội dung</label>
-          <textarea value={content} onChange={e => setContent(e.target.value)} placeholder="Nội dung..." style={{ minHeight: 120 }} />
-        </div>
-        <div className="fg">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.35rem' }}>
-            <label style={{ margin: 0 }}>Hình ảnh minh họa</label>
-            <button type="button" onClick={() => setShowLibPicker(true)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', border: '1px solid var(--green)', borderRadius: 6, padding: '.18rem .55rem', fontSize: 11.5, fontWeight: 600, color: 'var(--green)', background: 'var(--gl)', cursor: 'pointer' }}>
-              <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
-              Chọn từ Thư Viện
-            </button>
+          <label>Nội dung bài viết</label>
+          <div style={{ fontSize: 11.5, color: 'var(--mu)', marginBottom: '.55rem' }}>
+            Ghép xen kẽ các đoạn văn bản với ảnh/video theo thứ tự bạn muốn hiển thị. Mỗi ảnh/video có thể đặt tiêu đề riêng.
           </div>
-          <div className="upload-zone">
-            <input type="file" accept="image/*" multiple onChange={e => e.target.files && setNewImgs(v => [...v, ...Array.from(e.target.files!)])} />
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-            <p>Click hoặc kéo thả ảnh minh họa</p>
-          </div>
-          <div className="preview-grid">
-            {existingImgs.map((url, i) => (
-              <div key={i} className="preview-item">
-                <img src={url} alt="" />
-                <button className="preview-remove" onClick={() => setExistingImgs(v => v.filter((_, idx) => idx !== i))}>×</button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+            {blocks.map((b, i) => (
+              <div key={i} style={{ border: '1px solid var(--bd)', borderRadius: 'var(--r)', padding: '.65rem .75rem', background: 'var(--bg)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '.4rem' }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'var(--mu)', textTransform: 'uppercase', letterSpacing: '.5px' }}>
+                    {b.type === 'text' ? 'Văn bản' : b.type === 'video' ? 'Video' : 'Ảnh'}
+                  </span>
+                  <div style={{ display: 'flex', gap: '.3rem' }}>
+                    <button type="button" className="btn-icon" style={{ width: 26, height: 26 }} disabled={i === 0} onClick={() => moveBlock(i, -1)} title="Di chuyển lên">↑</button>
+                    <button type="button" className="btn-icon" style={{ width: 26, height: 26 }} disabled={i === blocks.length - 1} onClick={() => moveBlock(i, 1)} title="Di chuyển xuống">↓</button>
+                    <button type="button" className="btn-icon danger" style={{ width: 26, height: 26 }} onClick={() => removeBlock(i)} title="Xóa">×</button>
+                  </div>
+                </div>
+
+                {b.type === 'text' ? (
+                  <textarea value={b.text ?? ''} onChange={e => updateBlock(i, { text: e.target.value })} placeholder="Nội dung văn bản..." style={{ minHeight: 90 }} />
+                ) : b.url ? (
+                  <div>
+                    {b.type === 'video' ? (
+                      <video src={b.url} controls style={{ width: '100%', maxHeight: 180, borderRadius: 8, display: 'block', background: '#000' }} />
+                    ) : (
+                      <img src={b.url} alt="" style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 8, display: 'block' }} />
+                    )}
+                    <input value={b.caption ?? ''} onChange={e => updateBlock(i, { caption: e.target.value })} placeholder="Tiêu đề ảnh/video (hiển thị bên dưới)"
+                      style={{ marginTop: '.5rem', width: '100%', border: '1px solid var(--bd)', borderRadius: 'var(--r)', padding: '.5rem .7rem', fontSize: 13, fontFamily: 'inherit', color: 'var(--tx)', background: 'var(--sf)' }} />
+                    <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: '.4rem' }} onClick={() => updateBlock(i, { url: '' })}>Thay ảnh/video khác</button>
+                  </div>
+                ) : uploadingIdx === i ? (
+                  <div style={{ textAlign: 'center', padding: '1rem', fontSize: 12, color: 'var(--mu)' }}>{uploadStatus || 'Đang tải lên...'}</div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                    <div className="upload-zone" style={{ padding: '.75rem' }}>
+                      <input type="file" accept="image/*,video/*" onChange={e => e.target.files?.[0] && handleBlockFile(i, e.target.files[0])} />
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" strokeWidth="1.5"><path d="M4 16l4-4 4 4 4-6 4 6"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                      <p>Click hoặc kéo thả ảnh/video</p>
+                    </div>
+                    <button type="button" onClick={() => setLibPickerIndex(i)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '.3rem', alignSelf: 'flex-start', border: '1px solid var(--green)', borderRadius: 6, padding: '.22rem .6rem', fontSize: 11.5, fontWeight: 600, color: 'var(--green)', background: 'var(--gl)', cursor: 'pointer' }}>
+                      <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="2" width="5" height="5" rx="1"/><rect x="9" y="2" width="5" height="5" rx="1"/><rect x="2" y="9" width="5" height="5" rx="1"/><rect x="9" y="9" width="5" height="5" rx="1"/></svg>
+                      Chọn từ Thư Viện
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
-            {newImgs.map((f, i) => (
-              <div key={`n${i}`} className="preview-item">
-                <img src={URL.createObjectURL(f)} alt="" />
-                <button className="preview-remove" onClick={() => setNewImgs(v => v.filter((_, idx) => idx !== i))}>×</button>
-              </div>
-            ))}
+          </div>
+          <div style={{ display: 'flex', gap: '.5rem', marginTop: '.65rem' }}>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={addTextBlock}>+ Đoạn văn bản</button>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={addMediaBlock}>+ Ảnh / Video</button>
           </div>
         </div>
       </Modal>
 
-      {showLibPicker && (
+      {libPickerIndex !== null && (
         <MediaLibraryPicker
-          onConfirm={urls => { setExistingImgs(v => [...v, ...urls.filter(u => !v.includes(u))]); setShowLibPicker(false) }}
-          onClose={() => setShowLibPicker(false)}
+          onConfirm={item => { updateBlock(libPickerIndex, { type: item.type, url: item.url }); setLibPickerIndex(null) }}
+          onClose={() => setLibPickerIndex(null)}
         />
       )}
 

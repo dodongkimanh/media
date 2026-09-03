@@ -68,12 +68,20 @@ export interface Message {
   profiles?: Profile
 }
 
+export interface ArticleBlock {
+  type: 'text' | 'image' | 'video'
+  text?: string
+  url?: string
+  caption?: string
+}
+
 export interface Article {
   id: string
   type: ArticleType
   title: string
   content: string
   images: string[]
+  blocks: ArticleBlock[]
   created_by: string | null
   created_at: string
   updated_at: string
